@@ -1,0 +1,25 @@
+type project
+title
+    SimJobShop
+owners
+    Lukas Hollenstein
+authors 
+    Lukas Hollenstein
+projectUrl
+    https://github.com/lukasimir/SimJobShop1
+iconUrl
+    https://raw.githubusercontent.com/lukasimir/SimJobShop1/master/docs/files/img/logo.png
+licenseUrl
+    https://github.com/lukasimir/SimJobShop1/blob/master/LICENSE.txt
+requireLicenseAcceptance
+    false
+copyright
+    Copyright 2015
+tags
+    flexible-job-shop discrete-event simulation fsharp functional-programming
+summary
+    Discrete event simulation of a flexible job shop
+description
+    A model of a job shop that is simulated by means of a discrete event simulation engine, written in F#.
+
+
