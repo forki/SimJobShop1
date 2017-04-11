@@ -68,6 +68,7 @@
     <None Include="paket.template" />
     <Content Include="App.config" />
     <Compile Include="Engine.fs" />
+    <None Include="GenericApproach.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />
