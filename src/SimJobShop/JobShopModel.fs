@@ -1,29 +1,28 @@
-﻿type CommandAction<'entity, 'location> = 
-    | Create of 'entity
-    | MoveToWaitlist of 'entity * 'location
-    | MoveToInputBuffer of 'entity * 'location
-    | MoveToOutputBuffer of 'entity * 'location
-    | StartProcess of 'entity * 'location
-    | EndProcess of 'entity * 'location
-    | TakeFromWaitlist of 'location
+﻿module SimJobShop.JobShopModel
 
-type EventFact<'time, 'entity, 'location> = 
-    | Created of 'time * 'entity
-    | EnteredWaitlist of 'time * 'entity * 'location
-    | LeftWaitlist of 'time * 'entity * 'location
-    | EnteredInputBuffer of 'time * 'entity * 'location
-    | LeftInputBuffer of 'time * 'entity * 'location
-    | EnteredOutputBuffer of 'time * 'entity * 'location
-    | LeftOutputBuffer of 'time * 'entity * 'location
-    | StartedProcess of 'time * 'entity * 'location
-    | EndedProcess of 'time * 'entity * 'location
+type CommandAction<'Entity, 'Location> = 
+    | Create of 'Entity
+    | MoveToWaitlist of 'Entity * 'Location
+    | MoveToInputBuffer of 'Entity * 'Location
+    | MoveToOutputBuffer of 'Entity * 'Location
+    | StartProcess of 'Entity * 'Location
+    | EndProcess of 'Entity * 'Location
+    | TakeFromWaitlist of 'Location
 
-type Event<'time, 'entity, 'location> = 
-    { Time : 'time
-      (** TODO: Do we need this too?
-     ModelId : Model Id 
-**)
-      EventFact : EventFact<'time, 'entity, 'location> }
+type Event<'Time, 'Fact> = 
+    { Time : 'Time
+      Fact : 'Fact }
+
+type EventFact<'Time, 'Entity, 'Location> = 
+    | Created of 'Time * 'Entity
+    | EnteredWaitlist of 'Time * 'Entity * 'Location
+    | LeftWaitlist of 'Time * 'Entity * 'Location
+    | EnteredInputBuffer of 'Time * 'Entity * 'Location
+    | LeftInputBuffer of 'Time * 'Entity * 'Location
+    | EnteredOutputBuffer of 'Time * 'Entity * 'Location
+    | LeftOutputBuffer of 'Time * 'Entity * 'Location
+    | StartedProcess of 'Time * 'Entity * 'Location
+    | EndedProcess of 'Time * 'Entity * 'Location
 
 // When an event happened there are commands being issued!
 let CommandsFromEvent = 

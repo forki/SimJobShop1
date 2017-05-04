@@ -60,15 +60,16 @@
   -->
   <Import Project="..\..\.paket\paket.targets" />
   <ItemGroup>
-    <Compile Include="EventStore.fs" />
-    <Compile Include="Common.fs" />
-    <Compile Include="Library.fs" />
-    <None Include="Script.fsx" />
     <None Include="paket.references" />
     <None Include="paket.template" />
     <Content Include="App.config" />
+    <Compile Include="EventStore.fs" />
+    <Compile Include="Common.fs" />
     <Compile Include="Engine.fs" />
-    <None Include="GenericApproach.fsx" />
+    <Compile Include="JobShopModel.fs" />
+    <None Include="ScheduleTests.fsx" />
+    <None Include="Script.fsx" />
+    <None Include="SimulationTests.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />

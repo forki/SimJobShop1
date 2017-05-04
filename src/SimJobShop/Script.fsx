@@ -128,26 +128,24 @@ module Location =
 
 
 
-[<CustomComparison; CustomEquality>]
-type Person = 
-    { Name : string; Age : int }
 
-    override x.Equals yobj =  
-        match yobj with 
-        | :? Person as y -> (x.Name = y.Name) && (x.Age = y.Age)
-        | _ -> false
-    
-    override x.GetHashCode () =
-        hash x
 
-    interface System.IComparable with
-        member x.CompareTo yobj = 
-            match yobj with
-            | :? Person as y -> compare x.Age y.Age
-            | _ -> invalidArg "yobj" "cannot compare value of different types" 
+(** USAGE EXAMPLE **)
 
-            
-let a = {Name="a";Age=1}
-let b = {Name="b";Age=2}
-let b2 = {Name="b";Age=2}
-b2 <= b
+// generate data
+let products = JobShop.generateProducts
+let jobList = JobShop.generateJobs products
+
+// create model
+let model = JobShop.createModel products
+let schedule = JobShop.jobListToSchedule jobList
+  // let JobShop.jobListToSchedule jobList = jobList |> List.map JobShop.jobToCommand |> Schedule
+
+
+// run the simulation 
+open SimJobShop.Engine
+let simulation = createInitial model schedule
+let results = Simulation.run simulation
+
+
+
