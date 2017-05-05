@@ -79,7 +79,6 @@ let ``Adding two commands to an empty schedule then taking one command yields th
         | Failure _ -> false
 
 
-
 #time  // 10000 in ~ 30 sec
 ``Adding n commands one by one is equivalent to adding a list of commands in the same order`` 1000u
 #time
