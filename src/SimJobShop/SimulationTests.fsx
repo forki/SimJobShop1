@@ -9,7 +9,6 @@ type Event<'Time, 'Fact> =
     { Time : 'Time
       Fact : 'Fact }
 
-
 // Testing a dummy model
 type DummyState = {
     Time : int
@@ -34,22 +33,9 @@ let dummyModel = {
     }
 
 
-///////////////////
 let saveEvent = ignore
 let log = printfn "%s"
 let step sim = Simulation.evolveSim saveEvent log sim
-
-//let step = function
-//    | SimTerminated ->
-//        log "Simulaten terminated"
-//        SimTerminated
-//    | SimRun run -> 
-//        match Simulation.evolve saveEvent log run with
-//        | Success newRun -> SimRun newRun
-//        | Failure msg ->
-//            log "Simulaten terminated"
-//            SimTerminated
-////////////////
 
 //let maxTime = 10
 //let rand = System.Random(1)
