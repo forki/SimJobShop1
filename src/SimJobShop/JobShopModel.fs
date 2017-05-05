@@ -2,12 +2,12 @@
 
 type CommandAction<'Entity, 'Location> = 
     | Create of 'Entity
-    | MoveToWaitlist of 'Entity * 'Location
+    | EnterWaitlist of 'Entity * 'Location
+    | LeaveWaitlist of 'Location
     | MoveToInputBuffer of 'Entity * 'Location
     | MoveToOutputBuffer of 'Entity * 'Location
     | StartProcess of 'Entity * 'Location
     | EndProcess of 'Entity * 'Location
-    | TakeFromWaitlist of 'Location
 
 type Event<'Time, 'Fact> = 
     { Time : 'Time
