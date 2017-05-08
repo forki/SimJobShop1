@@ -67,7 +67,7 @@ let ``Adding n commands and taking n commands yields an empty schedule``
         for i in 1..(int)n do s <- removeOneCommand s
         Schedule.isEmpty s
 
-let ``Adding two commands to an empty schedule then taking one command yields the earliest command``
+let ``Adding two commands to an empty schedule then taking one command yields the earlier or first command``
     (t1:int) (t2:int) =
         let c1 = { Time = t1; Action = "first" }
         let c2 = { Time = t2; Action = "second" }
@@ -86,9 +86,9 @@ let ``Adding two commands to an empty schedule then taking one command yields th
 ``Adding n commands and taking n commands yields an empty schedule`` 1000u
 #time
 #time
-[ ``Adding two commands to an empty schedule then taking one command yields the earliest command`` 1 0
-  ``Adding two commands to an empty schedule then taking one command yields the earliest command`` 1 1
-  ``Adding two commands to an empty schedule then taking one command yields the earliest command`` 1 2 ]
+[ ``Adding two commands to an empty schedule then taking one command yields the earlier or first command`` 1 0
+  ``Adding two commands to an empty schedule then taking one command yields the earlier or first command`` 1 1
+  ``Adding two commands to an empty schedule then taking one command yields the earlier or first command`` 1 2 ]
 #time
 
 
