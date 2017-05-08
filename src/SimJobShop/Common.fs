@@ -160,18 +160,24 @@ type Repository<'id, 'item when 'id : comparison> =
 
 module Repository = 
     /// Returns true if the repository already contains the given id.
-    let private containsId id repo = Map.containsKey id repo.Items
+    let private containsId id repo =
+        Map.containsKey id repo.Items
     
     /// Adds an item with given id and returns a Result.Success with the repository.
     /// A Result.Failure is returned if the repository already containts that id.
     let private add id item repo = 
-        if containsId id repo then sprintf "Repository.add: Id already exists, id = %A" id |> Failure
-        else { repo with Items = Map.add id item repo.Items } |> Success
+        if containsId id repo then
+            sprintf "Repository.add: Id already exists, id = %A" id
+            |> Failure
+        else
+            { repo with Items = Map.add id item repo.Items }
+            |> Success
     
     /// Gets the item with the given id from the repository and returns it in a 
     /// Result.Success. If the id is not present a Result.Failure is returned.
     let get id repo = 
-        Map.tryFind id repo.Items |> Result.ofOption (sprintf "Repository.get: Item not found, id = %A" id)
+        Map.tryFind id repo.Items
+        |> Result.ofOption (sprintf "Repository.get: Item not found, id = %A" id)
     
     /// Inserts a new item into the repository and returns the new id along with the 
     /// updated repository. The id is generated and passed to the factory function 
@@ -188,13 +194,27 @@ module Repository =
     /// updated repository in a Result.Success. If the id is not present a 
     /// Result.Failure is returned. 
     let delete id repo = 
-        if containsId id repo then { repo with Items = Map.remove id repo.Items } |> Success
-        else sprintf "Repository.delete: Item not found, id = %A" id |> Failure
-    
+        if containsId id repo then
+            { repo with Items = Map.remove id repo.Items }
+            |> Success
+        else
+            sprintf "Repository.delete: Item not found, id = %A" id
+            |> Failure
     /// Updates the item with the given id from the repository and returns the 
     /// updated repository in a Result.Success. If the id is not present a 
     /// Result.Failure is returned. 
-    let update id item repo = delete id repo |> Result.bindR (fun r -> add id item r)
+    let update id item repo =
+        delete id repo
+        |> Result.bindR (fun r -> add id item r)
+    
+    /// Transforms the item with the given id using the transformation f and returns the 
+    /// updated repository in a Result.Success. If the id is not present a 
+    /// Result.Failure is returned. 
+    let transform id f repo =
+        get id repo
+        |> Result.mapR f
+        |> Result.bindR (fun item -> update id item repo)
+    
     
     /// Creates a new (empty) repository with the given id generating function.
     let create<'id, 'item when 'id : comparison> idGenerator = 
@@ -202,5 +222,6 @@ module Repository =
           NewId = idGenerator }
     
     /// Creates a new (empty) repository using the Id<'Item> type.
-    let createDefault<'item>() = Id.makeGenerator<'item>() |> create<'item Id, 'item>
-
+    let createDefault<'item>() =
+        Id.makeGenerator<'item>()
+        |> create<'item Id, 'item>
