@@ -7,15 +7,18 @@ module SimJobShop.Common
 // Common types
 // ======================================
 
-/// Id type
-type 'entity Id = Id of uint64
+/// Id type using a uint64 
+type Id<'a> = Id of uint64
 
-/// Makes an Id generator function
-let makeIdGenerator () =
-    let mutable lastId = 0UL
-    fun () ->
-        lastId <- lastId + 1UL
-        Id lastId
+/// Functions to use with Id<'a>
+module Id = 
+    /// Makes an Id generator function for the given type
+    let makeGenerator<'a> () : (unit -> 'a Id) =
+        let mutable lastId = 0UL
+        fun () ->
+            lastId <- lastId + 1UL
+            Id lastId
+
 
 // ======================================
 // Units of measure
@@ -56,6 +59,8 @@ let logToConsole msg = printfn "%s" msg
 
 let logIgnore (msg:string) = ignore msg
 
+
+
 // ======================================
 // Result type
 // ======================================
@@ -65,6 +70,7 @@ type Result<'a, 'error> =
     | Success of 'a
     | Failure of 'error
 
+/// Functions to work with Result<'a, 'error>
 module Result = 
     /// Return a success, i.e. lift into the result world.
     let returnR x = Success x
@@ -131,3 +137,70 @@ module Result =
             this.Using(sequence.GetEnumerator(), (fun enum -> this.While(enum.MoveNext, fun _ -> body enum.Current)))
     
     let result = ResultBuilder()
+
+    /// Transform an option into a result given an error message for None.
+    let ofOption error = function
+        | Some x -> Success x
+        | None -> Failure error
+    
+    /// Transform a boolean into a result given a success object for True and an error message for False.
+    let ofBool success error = function
+        | true -> Success success
+        | false -> Failure error
+
+
+// ======================================
+// Repository type
+// ======================================
+/// Represents a repository of items organised by id. A function NewId must be
+/// provided that generates unique Ids.
+type Repository<'id, 'item when 'id : comparison> = 
+    { Items : Map<'id, 'item>
+      NewId : unit -> 'id }
+
+module Repository = 
+    /// Returns true if the repository already contains the given id.
+    let private containsId id repo = Map.containsKey id repo.Items
+    
+    /// Adds an item with given id and returns a Result.Success with the repository.
+    /// A Result.Failure is returned if the repository already containts that id.
+    let private add id item repo = 
+        if containsId id repo then sprintf "Repository.add: Id already exists, id = %A" id |> Failure
+        else { repo with Items = Map.add id item repo.Items } |> Success
+    
+    /// Gets the item with the given id from the repository and returns it in a 
+    /// Result.Success. If the id is not present a Result.Failure is returned.
+    let get id repo = 
+        Map.tryFind id repo.Items |> Result.ofOption (sprintf "Repository.get: Item not found, id = %A" id)
+    
+    /// Inserts a new item into the repository and returns the new id along with the 
+    /// updated repository. The id is generated and passed to the factory function 
+    /// makeItem to make the item with that id. The id along with the updated 
+    /// repository is returned. Throws an exeption if the generated id already exists.
+    let insert makeItem repo = 
+        let id = repo.NewId()
+        let item = makeItem id
+        match add id item repo with
+        | Success newRepo -> (id, newRepo)
+        | Failure _ -> sprintf "Repository.insert: Id exists already, id = %A" id |> failwith
+    
+    /// Deletes the item with the given id from the repository and returns the 
+    /// updated repository in a Result.Success. If the id is not present a 
+    /// Result.Failure is returned. 
+    let delete id repo = 
+        if containsId id repo then { repo with Items = Map.remove id repo.Items } |> Success
+        else sprintf "Repository.delete: Item not found, id = %A" id |> Failure
+    
+    /// Updates the item with the given id from the repository and returns the 
+    /// updated repository in a Result.Success. If the id is not present a 
+    /// Result.Failure is returned. 
+    let update id item repo = delete id repo |> Result.bindR (fun r -> add id item r)
+    
+    /// Creates a new (empty) repository with the given id generating function.
+    let create<'id, 'item when 'id : comparison> idGenerator = 
+        { Items = Map.empty<'id, 'item>
+          NewId = idGenerator }
+    
+    /// Creates a new (empty) repository using the Id<'Item> type.
+    let createDefault<'item>() = Id.makeGenerator<'item>() |> create<'item Id, 'item>
+
