@@ -67,11 +67,11 @@
     <Compile Include="Common.fs" />
     <Compile Include="Engine.fs" />
     <Compile Include="JobShopModel.fs" />
+    <None Include="RepositoryTests.fsx" />
     <None Include="ScheduleTests.fsx" />
-    <None Include="Script.fsx" />
     <None Include="SimulationTests.fsx" />
     <None Include="JobShopModelTests.fsx" />
-    <None Include="RepositoryTests.fsx" />
+    <None Include="Script.fsx" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />

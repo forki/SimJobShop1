@@ -10,6 +10,17 @@ state
 the model
 *)
 
+
+
+
+
+
+
+
+
+
+
+
 type CommandAction<'Entity, 'Location> = 
     | Create of 'Entity
     | EnterWaitlist of 'Entity * 'Location
@@ -94,24 +105,25 @@ Apply: Can an event always be applied or can there be failures?
 //    | EndedProcess(time, entity, location) -> 9
 
 
+
+type Waitlist<'entity> = 
+    { Validate : 'entity -> bool
+      Compare : 'entity -> 'entity -> int
+      Items : 'entity list }
+
+module Waitlist = 
+    let Create validate compare = 
+        { Validate = validate
+          Compare = compare
+          List = [] }
+    let 
+
 type Location<'Entity, 'Buffer, 'Waitlist> = 
     { Id : Location<'Entity, 'Buffer, 'Waitlist> Id
       Capacity : int
       Waitlist : 'Waitlist
       InputBuffer : 'Buffer
       OutputBuffer : 'Buffer }
-
-/// A generic waitlist for entities that uses a comparer to rank the entities and 
-type Waitlist<'Entity> = 
-    { Validator : 'Entity -> bool
-      Comparer : 'Entity -> 'Entity -> int
-      Stack : 'Entity list }
-
-module Waitlist = 
-    let Create validate compare = 
-        { Validator = validate
-          Comparer = compare
-          Stack = [] }
 (**
     let Push : 'entity * 'entity Waitlist -> 'entity Waitlist
     let Pop : 'entity Waitlist -> ('entity * 'entity Waitlist) option
