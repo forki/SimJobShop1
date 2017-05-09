@@ -152,8 +152,8 @@ module Result =
 // ======================================
 // Repository type
 // ======================================
-/// Represents a repository of items organised by id. A function NewId must be
-/// provided that generates unique Ids.
+/// Represents an generic, immutable repository of items organised by id.
+/// A function NewId must be provided that generates unique Ids.
 type Repository<'id, 'item when 'id : comparison> = 
     { Items : Map<'id, 'item>
       NewId : unit -> 'id }
@@ -214,6 +214,10 @@ module Repository =
         get id repo
         |> Result.mapR f
         |> Result.bindR (fun item -> update id item repo)
+
+    /// Returns a sequence of all Ids in the repository.
+    let getAllIds repo =
+        repo.Items |> Map.toSeq |> Seq.map fst
     
     
     /// Creates a new (empty) repository with the given id generating function.
