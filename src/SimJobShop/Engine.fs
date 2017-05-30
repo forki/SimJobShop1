@@ -2,7 +2,6 @@
 
 open System
 open Common
-open EventStore
 
 /// Represents a command that is scheduled to be excecuted in the future.
 /// Implements IComparable (CustomComparison) based on the comparison of the time property.

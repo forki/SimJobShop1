@@ -11,6 +11,7 @@ module SimJobShop.Common
 type Id<'a> = Id of uint64
 
 /// Functions to use with Id<'a>
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Id = 
     /// Makes an Id generator function for the given type
     let makeGenerator<'a> () : (unit -> 'a Id) =
@@ -18,6 +19,9 @@ module Id =
         fun () ->
             lastId <- lastId + 1UL
             Id lastId
+    
+    /// Returns a string of the numeric value of the id.
+    let print (Id id) = sprintf "%i" id
 
 
 // ======================================
@@ -87,9 +91,10 @@ module Result =
     /// Map: Lift a one-parameter function to result world.
     let mapR f = bindR (f >> returnR)
     
-    // Infix version of map.
+    /// Infix version of map.
     let (<!>) = mapR
-    // Apply a function in the result world.
+
+    /// Apply a function in the result world.
     let applyR fR xR = fR >>= (fun f -> xR >>= (fun x -> returnR (f x)))
     
     /// Infix version of apply.
@@ -148,6 +153,12 @@ module Result =
         | true -> Success success
         | false -> Failure error
 
+    /// Return value on success or failwith error on failure.
+    let getValue xR =
+        match xR with
+        | Success x -> x
+        | Failure e -> failwith e
+
 
 // ======================================
 // Repository type
@@ -160,7 +171,7 @@ type Repository<'id, 'item when 'id : comparison> =
 
 module Repository = 
     /// Returns true if the repository already contains the given id.
-    let private containsId id repo =
+    let containsId id repo =
         Map.containsKey id repo.Items
     
     /// Adds an item with given id and returns a Result.Success with the repository.
@@ -200,6 +211,7 @@ module Repository =
         else
             sprintf "Repository.delete: Item not found, id = %A" id
             |> Failure
+
     /// Updates the item with the given id from the repository and returns the 
     /// updated repository in a Result.Success. If the id is not present a 
     /// Result.Failure is returned. 
@@ -218,6 +230,10 @@ module Repository =
     /// Returns a sequence of all Ids in the repository.
     let getAllIds repo =
         repo.Items |> Map.toSeq |> Seq.map fst
+
+    /// Returns a sequence of all Ids in the repository.
+    let getAllItems repo =
+        repo.Items |> Map.toSeq |> Seq.map snd
     
     
     /// Creates a new (empty) repository with the given id generating function.
@@ -229,3 +245,56 @@ module Repository =
     let createDefault<'item>() =
         Id.makeGenerator<'item>()
         |> create<'item Id, 'item>
+
+
+// ======================================
+// Random data generation
+// ======================================
+module Random = 
+    open System
+    
+    let makeGenerator seed = Random(seed)
+    let bool (rnd : Random) probOfTrue = rnd.NextDouble() < probOfTrue
+    let int (rnd : Random) min max = rnd.Next(min, max)
+    let uniform (rnd : Random) min max = (max - min) * rnd.NextDouble() + min
+    
+    let normalSequenceInfinite (rnd : Random) mean sigma = 
+        // Number of samples to average [4 to 10?] (tails stretch/flatten out as this gets larger)
+        let nSamples = 10
+        // calc normalization factors up front & alloc a random()   
+        let norm = sigma * sqrt (3 * nSamples |> float)
+        let shift = norm - mean
+        let scale = 2.0 * norm / (float nSamples)
+        
+        // return a gaussian # by averaging another random seq (central limit theory)
+        let rec gaussAvg n acc = 
+            if n > 0 then gaussAvg (n - 1) (acc + rnd.NextDouble())
+            else acc * scale - shift
+        
+        let rec gaussSeq() = 
+            seq { 
+                yield gaussAvg nSamples 0.0
+                yield! gaussSeq()
+            }
+        
+        gaussSeq()
+    
+    let boolSequenceInfinite (rnd : Random) probOfTrue = Seq.initInfinite (fun _ -> bool rnd probOfTrue)
+    let boolSequence (rnd : Random) probOfTrue count = Seq.init count (fun _ -> bool rnd probOfTrue)
+    let intSequenceInfinite (rnd : Random) min max = Seq.initInfinite (fun _ -> int rnd min max)
+    let intSequence (rnd : Random) min max count = Seq.init count (fun _ -> int rnd min max)
+    let uniformSequenceInfinite (rnd : Random) min max = Seq.initInfinite (fun _ -> uniform rnd min max)
+    let uniformSequence (rnd : Random) min max count = Seq.init count (fun _ -> uniform rnd min max)
+    let filter (rnd : Random) probOfTrue array = array |> Array.filter (fun _ -> bool rnd probOfTrue)
+    let shuffle (rnd : Random) array = array |> Array.sortBy (fun _ -> rnd.NextDouble())
+    
+    let sampleNoReplace (rnd : Random) count array = 
+        array
+        |> shuffle rnd
+        |> Array.take count
+    
+    let sampleReplace (rnd : Random) count array = 
+        let n = Array.length array
+        intSequence rnd 0 (n - 1) count
+        |> Seq.toArray
+        |> Array.map (fun i -> array.[i])
