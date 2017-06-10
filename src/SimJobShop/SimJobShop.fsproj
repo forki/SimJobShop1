@@ -67,11 +67,12 @@
     <Compile Include="Common.fs" />
     <Compile Include="Engine.fs" />
     <Compile Include="JobShopData.fs" />
+    <Compile Include="JobShopDataGeneration.fs" />
     <Compile Include="JobShopModel.fs" />
     <None Include="RepositoryTests.fsx" />
     <None Include="ScheduleTests.fsx" />
     <None Include="SimulationTests.fsx" />
-    <None Include="DataGeneration.fsx" />
+    <None Include="DataGenerationTests.fsx" />
     <None Include="JobShopModelTests.fsx" />
     <None Include="Script.fsx" />
   </ItemGroup>
