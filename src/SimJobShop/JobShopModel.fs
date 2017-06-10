@@ -10,7 +10,6 @@ type EntityId = Job Id
 type Entity = {JobId : Job Id; PendingTasks : Task list}
 type LocationId = Machine Id
 type Location = {MachineId : Machine Id; CapacityAvailable : Capacity; CapacityTotal : Capacity; Waitlist : EntityId list}
-//type Location = | Source | Sink | Process of Process
 type State = {
     Time : DateTime
     Data : JobShopData
@@ -155,10 +154,8 @@ type CommandAction =
     | CreateEntityForJob of Job Id
     | EnterWaitlist of EntityId * LocationId
     | TrySelectEntityFromWaitlist of LocationId
-//    | LeaveWaitlist of EntityId * LocationId
 //    | MoveToInputBuffer of EntityId * LocationId
 //    | MoveToOutputBuffer of EntityId * LocationId
-    | StartProcess of EntityId * LocationId
     | EndProcess of EntityId * LocationId
     | AnnihilateEntity of EntityId
 
@@ -169,7 +166,6 @@ type EventFact =
     | EnteredWaitlist of EntityId * LocationId
     // The entity was selected and removed from the waitlist of that location
     | SelectedEntityFromWaitlist of EntityId * LocationId
-//    | LeftWaitlist of EntityId * LocationId  // EntityId removed from waitlist of given location
 //    | EnteredInputBuffer of EntityId * LocationId  // 
 //    | LeftInputBuffer of EntityId * LocationId  // EntityId removed from output buffer of current location and command to enter the input buffer of the next location --> need current location
 //    | EnteredOutputBuffer of EntityId * LocationId
@@ -199,17 +195,13 @@ let execute state command =
         |> Option.map (fun entityId -> State.getEntity entityId state)
         |> function
             | Some entity when Location.isCapacityAvailable location entity ->
-                [ { Time = command.Time; Fact = SelectedEntityFromWaitlist (entity.JobId, locationId) } ]
+                [ { Time = command.Time; Fact = SelectedEntityFromWaitlist (entity.JobId, locationId) }
+                  { Time = command.Time; Fact = StartedProcess (entity.JobId, locationId) } ]
             | None | Some _ -> []
-    
-//    | LeaveWaitlist (entityId, locationId) -> LeftWaitlist (entityId, locationId)
     
 //    | MoveToInputBuffer (entityId, locationId) -> EnteredInputBuffer (entityId, locationId)
     
-//    | MoveToOutputBuffer (entityId, locationId) -> 1
-    
-    | StartProcess (entityId, locationId) ->
-        [ { Time = command.Time; Fact = StartedProcess (entityId, locationId) } ]
+//    | MoveToOutputBuffer (entityId, locationId) -> EnteredOutputBuffer (entityId, locationId)
 
     | EndProcess (entityId, locationId) ->
         [ { Time = command.Time; Fact = EndedProcess (entityId, locationId) } ]
@@ -217,18 +209,18 @@ let execute state command =
     | AnnihilateEntity entityId ->
         [ { Time = command.Time; Fact = AnnihilatedEntity entityId } ]
 
-
+    
 let apply state event =
     match event.Fact with
     | CreatedEntityForJob jobId -> 
         let entity, state' = State.createEntity jobId state
-        let commands =
+        let command =
             Entity.getNextMachineId entity
-            |> Option.map (fun locationId -> EnterWaitlist (entity.JobId, locationId))
-            |> Option.map (fun action -> { Time = event.Time; Action = action })
-            |> function | None -> [] | Some command -> [ command ]
-        // TODO: None means empty task list => Inconsistency of DeleteEntity command!
-        ({state' with Time = event.Time}, commands)
+            |> function
+                | Some locationId -> EnterWaitlist (entity.JobId, locationId)
+                | None -> AnnihilateEntity entity.JobId
+            |> fun action -> { Time = event.Time; Action = action }
+        ({state' with Time = event.Time}, [command])
 
     | EnteredWaitlist (entityId, locationId) ->
         let location = State.getLocation locationId state
@@ -241,8 +233,7 @@ let apply state event =
         let location = State.getLocation locationId state
         let location' = Location.removeEntityFromWaitlist entityId location
         let state' = State.updateLocation location' state
-        let command = { Time = event.Time; Action = StartProcess (entityId, locationId) }
-        ({state' with Time = event.Time}, [command])
+        ({state' with Time = event.Time}, [])
 
     | StartedProcess (entityId, locationId) ->
         let location = State.getLocation locationId state
@@ -264,7 +255,7 @@ let apply state event =
 
         let location' = Location.blockCapacity task.CapacityNeeded location
         let state' = State.updateLocation location' state
-        let command = { Time = event.Time + task.ProcessingTime; Action = EndProcess (entityId, locationId) }
+        let command = { Time = event.Time.Add task.ProcessingTime; Action = EndProcess (entityId, locationId) }
         ({state' with Time = event.Time}, [command])
 
     | EndedProcess (entityId, locationId) ->
@@ -288,8 +279,9 @@ let apply state event =
         let locationCommand = { Time = event.Time; Action = TrySelectEntityFromWaitlist locationId }
         let entityCommand =
             match Entity.getNextTask entity' with
-            | None -> { Time = event.Time; Action = AnnihilateEntity entityId }
-            | Some task -> { Time = event.Time; Action = EnterWaitlist (entityId, task.MachineId) }
+            | None -> AnnihilateEntity entityId
+            | Some task -> EnterWaitlist (entityId, task.MachineId)
+            |> fun action -> { Time = event.Time; Action = action }
         ({state' with Time = event.Time}, [entityCommand; locationCommand])
 
     | AnnihilatedEntity entityId ->
@@ -298,7 +290,7 @@ let apply state event =
             | Some task ->
                 sprintf "Inconsistency => Entity still has a pending task: entity id = %A, task location id = %A" entityId task.MachineId
                 |> failwith
-            | None -> () |> ignore
+            | None -> ()
 
         let state' = State.deleteEntity entityId state
         ({state' with Time = event.Time}, [])
