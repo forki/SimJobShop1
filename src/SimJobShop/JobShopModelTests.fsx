@@ -25,9 +25,9 @@ let machineIds = JobShopData.getAllMachineIds d0
 let m1 = machineIds |> Seq.head
 let m2 = machineIds |> Seq.skip 1 |> Seq.head
 let t1 = JobShopData.makeTask (m1, 0u, TimeSpan.FromHours(1.0), FiniteCapacity 1u) d0
-let t2 = JobShopData.makeTask (m2, 0u, TimeSpan.FromHours(2.0), FiniteCapacity 1u) d0
-let p1, d1 = JobShopData.makeProduct ([t1;t2], 2.5m, 250u) d0
-let p2, d2 = JobShopData.makeProduct ([t2;t1], 3.0m, 120u) d1
+let t2 = JobShopData.makeTask (m2, 1u, TimeSpan.FromHours(2.0), FiniteCapacity 1u) d0
+let p1, d1 = JobShopData.makeProduct ([t1; t2; {t1 with Rank=2u}], 2.5m, 250u) d0
+let p2, d2 = JobShopData.makeProduct ([{t2 with Rank=0u}; {t1 with Rank=1u}], 3.0m, 120u) d1
 
 
 // some jobs
@@ -37,13 +37,14 @@ let data =
     |> JobShopData.makeJob (p1, DateTime.Today, DateTime.Today.AddDays(2.0)) |> snd
 
 // write to files
-//JobShopData.writeDataToFiles """C:\Temp\testSim""" data
+JobShopData.writeDataToFiles """C:\Temp\testSim""" data
 
 
 // ======================================
 // Simulation
 // ======================================
-let saveEvent = ignore
+let mutable eventsLog = List.empty<Event>
+let saveEvent event = eventsLog <- event::eventsLog
 let log = printfn "%s"
 let step sim = Simulation.evolveSim saveEvent log sim
 
@@ -62,11 +63,10 @@ let initial = initSimulation data
 
 let final = Simulation.run saveEvent log initial
 
-
+let r = eventsLog |> Seq.rev |> Event.writeEventsToFile "\t" """C:\Temp\testSim\events.txt""" 
 
 
 (*******************
-
 
 Event '{Time = 10.06.2017 00:00:00;
  Fact = CreatedEntityForJob (Id 1UL);}' generated 1 commands

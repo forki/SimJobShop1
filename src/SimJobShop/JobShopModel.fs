@@ -178,6 +178,39 @@ type Time = DateTime
 
 type Event = { Time : Time; Fact : EventFact }
 
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module Event = 
+    let csvHeader separator = [ "Time"; "Event"; "JobId"; "MachineId" ] |> String.concat separator
+    
+    let csvRecord separator (event : Event) = 
+        let timeStr = event.Time.ToString()
+        let factStr, jobIdStr, machineIdStr =
+            match event.Fact with
+            | CreatedEntityForJob jobId ->
+                "CreatedEntityForJob", Id.print jobId, "NA"
+            | EnteredWaitlist (entityId, locationId) ->
+                "EnteredWaitlist", Id.print entityId, Id.print locationId
+            | SelectedEntityFromWaitlist (entityId, locationId) ->
+                "SelectedEntityFromWaitlist", Id.print entityId, Id.print locationId
+            | StartedProcess (entityId, locationId) ->
+                "StartedProcess", Id.print entityId, Id.print locationId
+            | EndedProcess (entityId, locationId) ->
+                "EndedProcess", Id.print entityId, Id.print locationId
+            | AnnihilatedEntity entityId ->
+                "AnnihilatedEntity", Id.print entityId, "NA"
+        [ timeStr; factStr; jobIdStr; machineIdStr ] |> String.concat separator
+    
+    let writeEventsToFile separator (path : string) events = 
+        try 
+            use sw = new IO.StreamWriter(path)
+            sw.WriteLine(csvHeader separator)
+            events
+            |> Seq.map (csvRecord separator)
+            |> Seq.iter sw.WriteLine
+            |> Success
+        with ex -> Failure ex.Message
+
+
 type Command = Command<Time, CommandAction>
 
 
