@@ -69,6 +69,7 @@
     <Compile Include="JobShopData.fs" />
     <Compile Include="JobShopDataGeneration.fs" />
     <Compile Include="JobShopModel.fs" />
+    <Compile Include="FlexibleJobShopData.fs" />
     <None Include="RepositoryTests.fsx" />
     <None Include="ScheduleTests.fsx" />
     <None Include="SimulationTests.fsx" />
