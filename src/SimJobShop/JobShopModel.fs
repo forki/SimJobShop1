@@ -7,7 +7,7 @@ open JobShopData
 
 
 type EntityId = Job Id
-type Entity = {JobId : Job Id; PendingTasks : Task list}
+type Entity = {JobId : Job Id; PendingTasks : Task list; CurrentTask : Task option}
 type LocationId = Machine Id
 type Location = {MachineId : Machine Id; CapacityAvailable : Capacity; CapacityTotal : Capacity; Waitlist : EntityId list}
 type State = {
@@ -43,7 +43,7 @@ module Location =
 
     /// Select the next entity from the waitlist.
     /// TEMP: Strictly FIFO!
-    let selectEntityFromWaitlist location =
+    let trySelectEntityFromWaitlist location =
         List.tryLast location.Waitlist
 
     let removeEntityFromWaitlist entityId location =
@@ -114,7 +114,7 @@ module State =
         let productResult = 
             jobResult
             |> Result.bindR (fun job -> JobShopData.getProduct job.ProductId state.Data)
-        Result.lift2R (fun job product -> { JobId = job.Id; PendingTasks = product.Tasks }) jobResult productResult
+        Result.lift2R (fun job product -> { JobId = job.Id; PendingTasks = product.Tasks; CurrentTask = None }) jobResult productResult
         |> Result.mapR (fun entity -> entity, addEntity state entity)
         |> Result.getValue
 
@@ -151,28 +151,32 @@ module State =
 
 
 type CommandAction = 
-    | CreateEntityForJob of Job Id
-    | EnterWaitlist of EntityId * LocationId
+    | CreateEntity of Job Id
+    | EnterEntityInWaitlist of EntityId * LocationId
     | TrySelectEntityFromWaitlist of LocationId
 //    | MoveToInputBuffer of EntityId * LocationId
+    | MoveToLocation of EntityId * LocationId
+    | EndChangeover of EntityId * LocationId
+    | EndProcessing of EntityId * LocationId
 //    | MoveToOutputBuffer of EntityId * LocationId
-    | EndProcess of EntityId * LocationId
     | AnnihilateEntity of EntityId
 
 type EventFact = 
-    // An entity with this Id was created and moved to the source
-    | CreatedEntityForJob of Job Id
-    // The entity was entered in the waitlist of that location
-    | EnteredWaitlist of EntityId * LocationId
-    // The entity was selected and removed from the waitlist of that location
-    | SelectedEntityFromWaitlist of EntityId * LocationId
-//    | EnteredInputBuffer of EntityId * LocationId  // 
-//    | LeftInputBuffer of EntityId * LocationId  // EntityId removed from output buffer of current location and command to enter the input buffer of the next location --> need current location
+    | EntityCreated of Job Id
+    | EntityEnteredInWaitlist of EntityId * LocationId
+    | EntitySelectedFromWaitlist of EntityId * LocationId
+//    | EnteredInputBuffer of EntityId * LocationId
+//    | LeftInputBuffer of EntityId * LocationId
+    | CapacityBlocked of EntityId * LocationId * Capacity
+    | ChangeoverStarted of EntityId * LocationId * TimeSpan
+    | ChangeoverEnded of EntityId * LocationId
+    | MovedToLocation of EntityId * LocationId
+    | CapacityReleased of EntityId * LocationId * Capacity
+    | ProcessingStarted of EntityId * LocationId
+    | ProcessingEnded of EntityId * LocationId
 //    | EnteredOutputBuffer of EntityId * LocationId
 //    | LeftOutputBuffer of EntityId * LocationId
-    | StartedProcess of EntityId * LocationId
-    | EndedProcess of EntityId * LocationId
-    | AnnihilatedEntity of EntityId
+    | EntityAnnihilated of EntityId
 
 type Time = DateTime
 
@@ -186,18 +190,28 @@ module Event =
         let timeStr = event.Time.ToString()
         let factStr, jobIdStr, machineIdStr =
             match event.Fact with
-            | CreatedEntityForJob jobId ->
-                "CreatedEntityForJob", Id.print jobId, "NA"
-            | EnteredWaitlist (entityId, locationId) ->
-                "EnteredWaitlist", Id.print entityId, Id.print locationId
-            | SelectedEntityFromWaitlist (entityId, locationId) ->
-                "SelectedEntityFromWaitlist", Id.print entityId, Id.print locationId
-            | StartedProcess (entityId, locationId) ->
-                "StartedProcess", Id.print entityId, Id.print locationId
-            | EndedProcess (entityId, locationId) ->
-                "EndedProcess", Id.print entityId, Id.print locationId
-            | AnnihilatedEntity entityId ->
-                "AnnihilatedEntity", Id.print entityId, "NA"
+            | EntityCreated jobId ->
+                "EntityCreated", Id.print jobId, "NA"
+            | EntityEnteredInWaitlist (entityId, locationId) ->
+                "EntityEnteredInWaitlist", Id.print entityId, Id.print locationId
+            | EntitySelectedFromWaitlist (entityId, locationId) ->
+                "EntitySelectedFromWaitlist", Id.print entityId, Id.print locationId
+            | CapacityBlocked (entityId, locationId, _) ->
+                "CapacityBlocked", Id.print entityId, Id.print locationId
+            | ChangeoverStarted (entityId, locationId, _) ->
+                "ChangeoverStarted", Id.print entityId, Id.print locationId
+            | ChangeoverEnded (entityId, locationId) ->
+                "ChangeoverEnded", Id.print entityId, Id.print locationId
+            | MovedToLocation (entityId, locationId) ->
+                "MovedToLocation", Id.print entityId, Id.print locationId
+            | CapacityReleased (entityId, locationId, _) ->
+                "CapacityReleased", Id.print entityId, Id.print locationId
+            | ProcessingStarted (entityId, locationId) ->
+                "ProcessingStarted", Id.print entityId, Id.print locationId
+            | ProcessingEnded (entityId, locationId) ->
+                "ProcessingEnded", Id.print entityId, Id.print locationId
+            | EntityAnnihilated entityId ->
+                "EntityAnnihilated", Id.print entityId, "NA"
         [ timeStr; factStr; jobIdStr; machineIdStr ] |> String.concat separator
     
     let writeEventsToFile separator (path : string) events = 
@@ -216,59 +230,113 @@ type Command = Command<Time, CommandAction>
 
 let execute state command =
     match command.Action with
-    | CreateEntityForJob entityData ->
-        [ { Time = command.Time; Fact = CreatedEntityForJob entityData } ]
+    | CreateEntity entityData ->
+        [ { Time = command.Time; Fact = EntityCreated entityData } ]
 
-    | EnterWaitlist (entityId, locationId) ->
-        [ { Time = command.Time; Fact = EnteredWaitlist (entityId, locationId) } ]
+    | EnterEntityInWaitlist (entityId, locationId) ->
+        [ { Time = command.Time; Fact = EntityEnteredInWaitlist (entityId, locationId) } ]
 
     | TrySelectEntityFromWaitlist locationId -> 
         let location = State.getLocation locationId state
-        Location.selectEntityFromWaitlist location
+        Location.trySelectEntityFromWaitlist location
         |> Option.map (fun entityId -> State.getEntity entityId state)
-        |> function
-            | Some entity when Location.isCapacityAvailable location entity ->
-                [ { Time = command.Time; Fact = SelectedEntityFromWaitlist (entity.JobId, locationId) }
-                  { Time = command.Time; Fact = StartedProcess (entity.JobId, locationId) } ]
-            | None | Some _ -> []
+        |> Option.filter (fun entity -> Location.isCapacityAvailable location entity)  //TEMP: May move this check to trySelect...
+        |> Option.toList
+        |> List.collect (fun entity ->
+            [
+                EntitySelectedFromWaitlist (entity.JobId, locationId)
+                //TEMP: This may fail if there's no pending task:
+                CapacityBlocked (entity.JobId, locationId, entity.PendingTasks.Head.CapacityNeeded)
+                //TEMP: compute changeoverTime here and determine wether it is needed:
+                ChangeoverStarted (entity.JobId, locationId, TimeSpan.FromMinutes(30.0))
+            ] )  
+        |> List.map (fun fact -> { Time = command.Time; Fact = fact })
+        
+    | EndChangeover (entityId, locationId) ->
+        [ { Time = command.Time; Fact = ChangeoverEnded (entityId, locationId) } ]
     
-//    | MoveToInputBuffer (entityId, locationId) -> EnteredInputBuffer (entityId, locationId)
-    
-//    | MoveToOutputBuffer (entityId, locationId) -> EnteredOutputBuffer (entityId, locationId)
+    | MoveToLocation (entityId, locationId) ->
+        //TEMP: improve this implementation
+        let fact1 = MovedToLocation (entityId, locationId)
+        let fact2option =
+            State.getEntity entityId state
+            |> fun entity -> entity.CurrentTask
+            |> Option.map (fun task -> CapacityReleased (entityId, task.MachineId, task.CapacityNeeded) )
+        let fact3 = ProcessingStarted (entityId, locationId)
+        [ Some fact1; fact2option; Some fact3 ]
+        |> List.choose id
+        |> List.map (fun fact -> { Time = command.Time; Fact = fact } )
 
-    | EndProcess (entityId, locationId) ->
-        [ { Time = command.Time; Fact = EndedProcess (entityId, locationId) } ]
+    | EndProcessing (entityId, locationId) ->
+        [ { Time = command.Time; Fact = ProcessingEnded (entityId, locationId) } ]
 
     | AnnihilateEntity entityId ->
-        [ { Time = command.Time; Fact = AnnihilatedEntity entityId } ]
+        let fact1option =
+            State.getEntity entityId state
+            |> fun entity -> entity.CurrentTask
+            |> Option.map (fun task -> CapacityReleased (entityId, task.MachineId, task.CapacityNeeded) )
+        let fact2 = EntityAnnihilated entityId
+        [ fact1option; Some fact2 ]
+        |> List.choose id
+        |> List.map (fun fact -> { Time = command.Time; Fact = fact } )
+
+//    | MoveToInputBuffer (entityId, locationId) -> EnteredInputBuffer (entityId, locationId)    
+//    | MoveToOutputBuffer (entityId, locationId) -> EnteredOutputBuffer (entityId, locationId)
 
     
 let apply state event =
     match event.Fact with
-    | CreatedEntityForJob jobId -> 
+    | EntityCreated jobId -> 
         let entity, state' = State.createEntity jobId state
         let command =
-            Entity.getNextMachineId entity
-            |> function
-                | Some locationId -> EnterWaitlist (entity.JobId, locationId)
-                | None -> AnnihilateEntity entity.JobId
+            match List.tryHead entity.PendingTasks with
+            | Some task -> EnterEntityInWaitlist (entity.JobId, task.MachineId)
+            | None -> AnnihilateEntity entity.JobId
             |> fun action -> { Time = event.Time; Action = action }
         ({state' with Time = event.Time}, [command])
 
-    | EnteredWaitlist (entityId, locationId) ->
+    | EntityEnteredInWaitlist (entityId, locationId) ->
         let location = State.getLocation locationId state
         let location' = Location.addToWaitlist entityId location
         let state' = State.updateLocation location' state
         let command = { Time = event.Time; Action = TrySelectEntityFromWaitlist locationId }
         ({state' with Time = event.Time}, [command])
 
-    | SelectedEntityFromWaitlist (entityId, locationId) ->
+    | EntitySelectedFromWaitlist (entityId, locationId) ->
         let location = State.getLocation locationId state
         let location' = Location.removeEntityFromWaitlist entityId location
         let state' = State.updateLocation location' state
         ({state' with Time = event.Time}, [])
 
-    | StartedProcess (entityId, locationId) ->
+    | CapacityBlocked (entityId, locationId, capacity) ->
+        let location = State.getLocation locationId state
+        // TEMP: consistency checks
+        if Capacity.isLess location.CapacityAvailable capacity then
+            sprintf "Inconsistency => Not enough capacity available: entity id = %A, location id = %A, capacity available = %A, capacity needed = %A" entityId locationId location.CapacityAvailable capacity
+            |> failwith
+        let location' = Location.blockCapacity capacity location
+        let state' = State.updateLocation location' state
+        ({state' with Time = event.Time}, [])
+
+    | ChangeoverStarted (entityId, locationId, changeoverTime) ->
+        let command = { Time = event.Time.Add changeoverTime; Action = EndChangeover (entityId, locationId) }
+        ({state with Time = event.Time}, [command])
+
+    | ChangeoverEnded (entityId, locationId) ->
+        let command = { Time = event.Time; Action = MoveToLocation (entityId, locationId) }
+        ({state with Time = event.Time}, [command])
+
+    | MovedToLocation (entityId, locationId) ->
+        ({state with Time = event.Time}, [])
+
+    | CapacityReleased (entityId, locationId, capacity) ->
+        let location = State.getLocation locationId state
+        let location' = Location.releaseCapacity capacity location
+        let state' = State.updateLocation location' state
+        let command = { Time = event.Time; Action = TrySelectEntityFromWaitlist locationId }
+        ({state' with Time = event.Time}, [command])
+
+    | ProcessingStarted (entityId, locationId) ->
         let location = State.getLocation locationId state
         let entity = State.getEntity entityId state
         let task =
@@ -276,48 +344,35 @@ let apply state event =
             | None ->
                 sprintf "Inconsistency => Entity has no task left: entity id = %A, location id = %A" entityId locationId
                 |> failwith
-            | Some t -> t
+            | Some task when task.MachineId <> location.MachineId ->
+                sprintf "Inconsistency => wrong MachineId: expected = %A, actual = %A" id location.MachineId
+                |> failwith
+            | Some task -> task
 
-        // TEMP: consistency checks
-        if Capacity.isLess location.CapacityAvailable task.CapacityNeeded then
-            sprintf "Inconsistency => Not enough capacity available: location id = %A, capacity available = %A, entity id = %A, capacity needed = %A" locationId location.CapacityAvailable entityId task.CapacityNeeded
-            |> failwith
-        if task.MachineId <> location.MachineId then
-            sprintf "Inconsistency => wrong MachineId: expected = %A, actual = %A" id location.MachineId
-            |> failwith
+        let entity' = { entity with CurrentTask = Some task }
+        let state' = State.updateEntity entity' state            
 
-        let location' = Location.blockCapacity task.CapacityNeeded location
-        let state' = State.updateLocation location' state
-        let command = { Time = event.Time.Add task.ProcessingTime; Action = EndProcess (entityId, locationId) }
+        let command = { Time = event.Time.Add task.ProcessingTime; Action = EndProcessing (entityId, locationId) }
         ({state' with Time = event.Time}, [command])
 
-    | EndedProcess (entityId, locationId) ->
-        let location = State.getLocation locationId state
+    | ProcessingEnded (entityId, locationId) ->
         let entity = State.getEntity entityId state
-        
         let currentTask =
-            match Entity.getNextTask entity with
+            match entity.CurrentTask with
             | None ->
                 sprintf "Inconsistency => Entity has no current task: entity id = %A, location id = %A" entityId locationId
                 |> failwith
             | Some task -> task
-
         let entity' = Entity.removeTask currentTask entity
-        let location' = Location.releaseCapacity currentTask.CapacityNeeded location
-        let state' =
-            state
-            |> State.updateLocation location'
-            |> State.updateEntity entity'
-
-        let locationCommand = { Time = event.Time; Action = TrySelectEntityFromWaitlist locationId }
-        let entityCommand =
+        let state' = State.updateEntity entity' state
+        let command =
             match Entity.getNextTask entity' with
             | None -> AnnihilateEntity entityId
-            | Some task -> EnterWaitlist (entityId, task.MachineId)
+            | Some task -> EnterEntityInWaitlist (entityId, task.MachineId)
             |> fun action -> { Time = event.Time; Action = action }
-        ({state' with Time = event.Time}, [entityCommand; locationCommand])
+        ({state' with Time = event.Time}, [command])
 
-    | AnnihilatedEntity entityId ->
+    | EntityAnnihilated entityId ->
         // TEMP: consistency check
         match State.getEntity entityId state |> Entity.getNextTask with
             | Some task ->
@@ -336,7 +391,7 @@ let private initModel jobShopData =
 
 let private initSchedule jobShopData =
     JobShopData.getAllJobs jobShopData
-    |> Seq.map (fun job -> { Time = job.ReleaseDate; Action = CreateEntityForJob job.Id } )
+    |> Seq.map (fun job -> { Time = job.ReleaseDate; Action = CreateEntity job.Id } )
     |> Schedule.ofSeq
 
 let initSimulation jobShopData =

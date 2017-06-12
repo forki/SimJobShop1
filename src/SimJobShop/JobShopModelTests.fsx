@@ -26,8 +26,9 @@ let m1 = machineIds |> Seq.head
 let m2 = machineIds |> Seq.skip 1 |> Seq.head
 let t1 = JobShopData.makeTask (m1, 0u, TimeSpan.FromHours(1.0), FiniteCapacity 1u) d0
 let t2 = JobShopData.makeTask (m2, 1u, TimeSpan.FromHours(2.0), FiniteCapacity 1u) d0
-let p1, d1 = JobShopData.makeProduct ([t1; t2; {t1 with Rank=2u}], 2.5m, 250u) d0
-let p2, d2 = JobShopData.makeProduct ([{t2 with Rank=0u}; {t1 with Rank=1u}], 3.0m, 120u) d1
+//let p1, d1 = JobShopData.makeProduct ([t1; t2; {t1 with Rank=2u}], 2.5, 250u) d0
+let p1, d1 = JobShopData.makeProduct ([t1; t2], 2.5, 250u) d0
+let p2, d2 = JobShopData.makeProduct ([{t2 with Rank=0u}; {t1 with Rank=1u}], 3.0, 120u) d1
 
 
 // some jobs
@@ -63,51 +64,92 @@ let initial = initSimulation data
 
 let final = Simulation.run saveEvent log initial
 
-let r = eventsLog |> Seq.rev |> Event.writeEventsToFile "\t" """C:\Temp\testSim\events.txt""" 
+//let r = eventsLog |> Seq.rev |> Event.writeEventsToFile "\t" """C:\Temp\testSim\events.txt""" 
+let r = eventsLog |> Seq.rev |> Event.writeEventsToFile "\t" """C:\Temp\test\events.txt""" 
 
 
 (*******************
 
-Event '{Time = 10.06.2017 00:00:00;
- Fact = CreatedEntityForJob (Id 1UL);}' generated 1 commands
-Event '{Time = 10.06.2017 00:00:00;
- Fact = CreatedEntityForJob (Id 2UL);}' generated 1 commands
-Event '{Time = 10.06.2017 00:00:00;
- Fact = EnteredWaitlist (Id 1UL,Id 1UL);}' generated 1 commands
-Event '{Time = 10.06.2017 00:00:00;
- Fact = EnteredWaitlist (Id 2UL,Id 1UL);}' generated 1 commands
-Event '{Time = 10.06.2017 00:00:00;
- Fact = SelectedEntityFromWaitlist (Id 1UL,Id 1UL);}' generated 0 commands
-Event '{Time = 10.06.2017 00:00:00;
- Fact = StartedProcess (Id 1UL,Id 1UL);}' generated 1 commands
-Event '{Time = 10.06.2017 01:00:00;
- Fact = EndedProcess (Id 1UL,Id 1UL);}' generated 2 commands
-Event '{Time = 10.06.2017 01:00:00;
- Fact = EnteredWaitlist (Id 1UL,Id 2UL);}' generated 1 commands
-Event '{Time = 10.06.2017 01:00:00;
- Fact = SelectedEntityFromWaitlist (Id 2UL,Id 1UL);}' generated 0 commands
-Event '{Time = 10.06.2017 01:00:00;
- Fact = StartedProcess (Id 2UL,Id 1UL);}' generated 1 commands
-Event '{Time = 10.06.2017 01:00:00;
- Fact = SelectedEntityFromWaitlist (Id 1UL,Id 2UL);}' generated 0 commands
-Event '{Time = 10.06.2017 01:00:00;
- Fact = StartedProcess (Id 1UL,Id 2UL);}' generated 1 commands
-Event '{Time = 10.06.2017 02:00:00;
- Fact = EndedProcess (Id 2UL,Id 1UL);}' generated 2 commands
-Event '{Time = 10.06.2017 02:00:00;
- Fact = EnteredWaitlist (Id 2UL,Id 2UL);}' generated 1 commands
-Event '{Time = 10.06.2017 03:00:00;
- Fact = EndedProcess (Id 1UL,Id 2UL);}' generated 2 commands
-Event '{Time = 10.06.2017 03:00:00;
- Fact = AnnihilatedEntity (Id 1UL);}' generated 0 commands
-Event '{Time = 10.06.2017 03:00:00;
- Fact = SelectedEntityFromWaitlist (Id 2UL,Id 2UL);}' generated 0 commands
-Event '{Time = 10.06.2017 03:00:00;
- Fact = StartedProcess (Id 2UL,Id 2UL);}' generated 1 commands
-Event '{Time = 10.06.2017 05:00:00;
- Fact = EndedProcess (Id 2UL,Id 2UL);}' generated 2 commands
-Event '{Time = 10.06.2017 05:00:00;
- Fact = AnnihilatedEntity (Id 2UL);}' generated 0 commands
+Event '{Time = 12.06.2017 00:00:00;
+ Fact = EntityCreated (Id 1UL);}' generated 1 commands
+Event '{Time = 12.06.2017 00:00:00;
+ Fact = EntityCreated (Id 2UL);}' generated 1 commands
+Event '{Time = 12.06.2017 00:00:00;
+ Fact = EntityEnteredInWaitlist (Id 1UL,Id 1UL);}' generated 1 commands
+Event '{Time = 12.06.2017 00:00:00;
+ Fact = EntityEnteredInWaitlist (Id 2UL,Id 1UL);}' generated 1 commands
+Event '{Time = 12.06.2017 00:00:00;
+ Fact = EntitySelectedFromWaitlist (Id 1UL,Id 1UL);}' generated 0 commands
+Event '{Time = 12.06.2017 00:00:00;
+ Fact = CapacityBlocked (Id 1UL,Id 1UL,FiniteCapacity 1u);}' generated 0 commands
+Event '{Time = 12.06.2017 00:00:00;
+ Fact = ChangeoverStarted (Id 1UL,Id 1UL,00:30:00);}' generated 1 commands
+Event '{Time = 12.06.2017 00:30:00;
+ Fact = ChangeoverEnded (Id 1UL,Id 1UL);}' generated 1 commands
+Event '{Time = 12.06.2017 00:30:00;
+ Fact = MovedToLocation (Id 1UL,Id 1UL);}' generated 0 commands
+Event '{Time = 12.06.2017 00:30:00;
+ Fact = ProcessingStarted (Id 1UL,Id 1UL);}' generated 1 commands
+Event '{Time = 12.06.2017 01:30:00;
+ Fact = ProcessingEnded (Id 1UL,Id 1UL);}' generated 1 commands
+Event '{Time = 12.06.2017 01:30:00;
+ Fact = EntityEnteredInWaitlist (Id 1UL,Id 2UL);}' generated 1 commands
+Event '{Time = 12.06.2017 01:30:00;
+ Fact = EntitySelectedFromWaitlist (Id 1UL,Id 2UL);}' generated 0 commands
+Event '{Time = 12.06.2017 01:30:00;
+ Fact = CapacityBlocked (Id 1UL,Id 2UL,FiniteCapacity 1u);}' generated 0 commands
+Event '{Time = 12.06.2017 01:30:00;
+ Fact = ChangeoverStarted (Id 1UL,Id 2UL,00:30:00);}' generated 1 commands
+Event '{Time = 12.06.2017 02:00:00;
+ Fact = ChangeoverEnded (Id 1UL,Id 2UL);}' generated 1 commands
+Event '{Time = 12.06.2017 02:00:00;
+ Fact = MovedToLocation (Id 1UL,Id 2UL);}' generated 0 commands
+Event '{Time = 12.06.2017 02:00:00;
+ Fact = CapacityReleased (Id 1UL,Id 1UL,FiniteCapacity 1u);}' generated 1 commands
+Event '{Time = 12.06.2017 02:00:00;
+ Fact = ProcessingStarted (Id 1UL,Id 2UL);}' generated 1 commands
+Event '{Time = 12.06.2017 02:00:00;
+ Fact = EntitySelectedFromWaitlist (Id 2UL,Id 1UL);}' generated 0 commands
+Event '{Time = 12.06.2017 02:00:00;
+ Fact = CapacityBlocked (Id 2UL,Id 1UL,FiniteCapacity 1u);}' generated 0 commands
+Event '{Time = 12.06.2017 02:00:00;
+ Fact = ChangeoverStarted (Id 2UL,Id 1UL,00:30:00);}' generated 1 commands
+Event '{Time = 12.06.2017 02:30:00;
+ Fact = ChangeoverEnded (Id 2UL,Id 1UL);}' generated 1 commands
+Event '{Time = 12.06.2017 02:30:00;
+ Fact = MovedToLocation (Id 2UL,Id 1UL);}' generated 0 commands
+Event '{Time = 12.06.2017 02:30:00;
+ Fact = ProcessingStarted (Id 2UL,Id 1UL);}' generated 1 commands
+Event '{Time = 12.06.2017 03:30:00;
+ Fact = ProcessingEnded (Id 2UL,Id 1UL);}' generated 1 commands
+Event '{Time = 12.06.2017 03:30:00;
+ Fact = EntityEnteredInWaitlist (Id 2UL,Id 2UL);}' generated 1 commands
+Event '{Time = 12.06.2017 04:00:00;
+ Fact = ProcessingEnded (Id 1UL,Id 2UL);}' generated 1 commands
+Event '{Time = 12.06.2017 04:00:00;
+ Fact = CapacityReleased (Id 1UL,Id 2UL,FiniteCapacity 1u);}' generated 1 commands
+Event '{Time = 12.06.2017 04:00:00;
+ Fact = EntityAnnihilated (Id 1UL);}' generated 0 commands
+Event '{Time = 12.06.2017 04:00:00;
+ Fact = EntitySelectedFromWaitlist (Id 2UL,Id 2UL);}' generated 0 commands
+Event '{Time = 12.06.2017 04:00:00;
+ Fact = CapacityBlocked (Id 2UL,Id 2UL,FiniteCapacity 1u);}' generated 0 commands
+Event '{Time = 12.06.2017 04:00:00;
+ Fact = ChangeoverStarted (Id 2UL,Id 2UL,00:30:00);}' generated 1 commands
+Event '{Time = 12.06.2017 04:30:00;
+ Fact = ChangeoverEnded (Id 2UL,Id 2UL);}' generated 1 commands
+Event '{Time = 12.06.2017 04:30:00;
+ Fact = MovedToLocation (Id 2UL,Id 2UL);}' generated 0 commands
+Event '{Time = 12.06.2017 04:30:00;
+ Fact = CapacityReleased (Id 2UL,Id 1UL,FiniteCapacity 1u);}' generated 1 commands
+Event '{Time = 12.06.2017 04:30:00;
+ Fact = ProcessingStarted (Id 2UL,Id 2UL);}' generated 1 commands
+Event '{Time = 12.06.2017 06:30:00;
+ Fact = ProcessingEnded (Id 2UL,Id 2UL);}' generated 1 commands
+Event '{Time = 12.06.2017 06:30:00;
+ Fact = CapacityReleased (Id 2UL,Id 2UL,FiniteCapacity 1u);}' generated 1 commands
+Event '{Time = 12.06.2017 06:30:00;
+ Fact = EntityAnnihilated (Id 2UL);}' generated 0 commands
 Simulaten terminated: Schedule is empty
 
 
