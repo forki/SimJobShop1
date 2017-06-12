@@ -66,6 +66,60 @@ let logIgnore (msg:string) = ignore msg
 
 
 // ======================================
+// Capacity type
+// ======================================
+type Capacity = 
+    | InfiniteCapacity
+    | FiniteCapacity of uint32
+
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module Capacity = 
+    let zero = FiniteCapacity 0u
+    let isZero capacity = (capacity = zero)
+    let isLess c1 c2 =
+        match c1, c2 with
+        | InfiniteCapacity, InfiniteCapacity -> false
+        | InfiniteCapacity, FiniteCapacity _ -> false
+        | FiniteCapacity _, InfiniteCapacity -> true
+        | FiniteCapacity x1, FiniteCapacity x2 -> x1 < x2
+    let isLessOrEqual c1 c2 =
+        match c1, c2 with
+        | InfiniteCapacity, InfiniteCapacity -> true
+        | InfiniteCapacity, FiniteCapacity _ -> false
+        | FiniteCapacity _, InfiniteCapacity -> true
+        | FiniteCapacity x1, FiniteCapacity x2 -> x1 <= x2
+    let isGreater c1 c2 =
+        match c1, c2 with
+        | InfiniteCapacity, InfiniteCapacity -> false
+        | InfiniteCapacity, FiniteCapacity _ -> true
+        | FiniteCapacity _, InfiniteCapacity -> false
+        | FiniteCapacity x1, FiniteCapacity x2 -> x1 > x2
+    let isGreaterOrEqual c1 c2 =
+        match c1, c2 with
+        | InfiniteCapacity, InfiniteCapacity -> true
+        | InfiniteCapacity, FiniteCapacity _ -> true
+        | FiniteCapacity _, InfiniteCapacity -> false
+        | FiniteCapacity x1, FiniteCapacity x2 -> x1 >= x2
+    let add c1 c2 =
+        match c1, c2 with
+        | InfiniteCapacity, InfiniteCapacity -> InfiniteCapacity
+        | InfiniteCapacity, FiniteCapacity _ -> InfiniteCapacity
+        | FiniteCapacity _, InfiniteCapacity -> InfiniteCapacity
+        | FiniteCapacity x1, FiniteCapacity x2 -> x1 + x2 |> FiniteCapacity
+    let subtract c1 c2 =
+        match c1, c2 with
+        | InfiniteCapacity, InfiniteCapacity -> zero
+        | InfiniteCapacity, FiniteCapacity _ -> InfiniteCapacity
+        | FiniteCapacity _, InfiniteCapacity -> zero
+        | FiniteCapacity x1, FiniteCapacity x2 -> max (x1 - x2) 0u |> FiniteCapacity
+
+    let print = 
+        function 
+        | InfiniteCapacity -> "inf"
+        | FiniteCapacity c -> sprintf "%i" c
+
+
+// ======================================
 // Result type
 // ======================================
 /// Represents a result that allows for passing values 
