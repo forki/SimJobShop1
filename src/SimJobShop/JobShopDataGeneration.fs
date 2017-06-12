@@ -34,7 +34,8 @@ let generateTaskCount (rnd : Random) p =
     if p.MinTaskCount > p.MaxTaskCount then failwith "minTaskCount cannot be larger than maxTaskCount."
     Random.int rnd p.MinTaskCount p.MaxTaskCount
 
-let generatePrice (rnd : Random) p = Random.uniform rnd p.MinPrice p.MinPrice |> decimal
+let generatePrice (rnd : Random) p = Random.uniform rnd p.MinPrice p.MinPrice
+
 let generateUnitsPerYear (rnd : Random) p = Random.int rnd p.MinUnitsPerYear p.MaxUnitsPerYear |> uint32
 
 let generateTaskList (rnd : Random) p count jobShopData = 
@@ -53,7 +54,7 @@ let generateTaskList (rnd : Random) p count jobShopData =
     |> Seq.map (fun data -> JobShopData.makeTask data jobShopData)
     |> Seq.toList
 
-let generateMachines (rnd : Random) p jobShopData = 
+let generateMachines (_ : Random) p jobShopData = 
     JobShopData.addDefaultMachines p.MachineCount jobShopData
 
 let generateProducts (rnd : Random) p jobShopData = 
