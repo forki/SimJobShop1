@@ -12,14 +12,12 @@ Invariants in the JobShopData Aggregate
 - Jobs: JobIds must be unique; Jobs are processed in order of the job list.
 *)
 
-type Capacity = 
-    | InfiniteCapacity
-    | FiniteCapacity of uint32
 
 type Machine = 
     { Id : Machine Id
       Capacity : Capacity
-      InputBufferCapacity : Capacity }
+      InputBufferCapacity : Capacity
+      }
 
 type Task = 
     { MachineId : Machine Id
@@ -30,7 +28,7 @@ type Task =
 type Product = 
     { Id : Product Id
       Tasks : Task list
-      Price : decimal
+      Price : float
       UnitsPerYear : uint32 }
 
 type Job = 
@@ -44,51 +42,6 @@ type JobShopData =
       Products : Repository<Product Id, Product>
       Jobs : Repository<Job Id, Job> }
 
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module Capacity = 
-    let zero = FiniteCapacity 0u
-    let isZero capacity = (capacity = zero)
-    let isLess c1 c2 =
-        match c1, c2 with
-        | InfiniteCapacity, InfiniteCapacity -> false
-        | InfiniteCapacity, FiniteCapacity _ -> false
-        | FiniteCapacity _, InfiniteCapacity -> true
-        | FiniteCapacity x1, FiniteCapacity x2 -> x1 < x2
-    let isLessOrEqual c1 c2 =
-        match c1, c2 with
-        | InfiniteCapacity, InfiniteCapacity -> true
-        | InfiniteCapacity, FiniteCapacity _ -> false
-        | FiniteCapacity _, InfiniteCapacity -> true
-        | FiniteCapacity x1, FiniteCapacity x2 -> x1 <= x2
-    let isGreater c1 c2 =
-        match c1, c2 with
-        | InfiniteCapacity, InfiniteCapacity -> false
-        | InfiniteCapacity, FiniteCapacity _ -> true
-        | FiniteCapacity _, InfiniteCapacity -> false
-        | FiniteCapacity x1, FiniteCapacity x2 -> x1 > x2
-    let isGreaterOrEqual c1 c2 =
-        match c1, c2 with
-        | InfiniteCapacity, InfiniteCapacity -> true
-        | InfiniteCapacity, FiniteCapacity _ -> true
-        | FiniteCapacity _, InfiniteCapacity -> false
-        | FiniteCapacity x1, FiniteCapacity x2 -> x1 >= x2
-    let add c1 c2 =
-        match c1, c2 with
-        | InfiniteCapacity, InfiniteCapacity -> InfiniteCapacity
-        | InfiniteCapacity, FiniteCapacity _ -> InfiniteCapacity
-        | FiniteCapacity _, InfiniteCapacity -> InfiniteCapacity
-        | FiniteCapacity x1, FiniteCapacity x2 -> x1 + x2 |> FiniteCapacity
-    let subtract c1 c2 =
-        match c1, c2 with
-        | InfiniteCapacity, InfiniteCapacity -> zero
-        | InfiniteCapacity, FiniteCapacity _ -> InfiniteCapacity
-        | FiniteCapacity _, InfiniteCapacity -> zero
-        | FiniteCapacity x1, FiniteCapacity x2 -> max (x1 - x2) 0u |> FiniteCapacity
-
-    let print = 
-        function 
-        | InfiniteCapacity -> "inf"
-        | FiniteCapacity c -> sprintf "%i" c
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Machine = 
@@ -130,7 +83,7 @@ module Task =
 module Product = 
     let create id taskList price unitsPerYear = 
         if List.length taskList < 1 then failwith "A product needs at least one task."
-        if price < 0.0m then failwith "The price of a product cannot be negative."
+        if price < 0.0 then failwith "The price of a product cannot be negative."
         if unitsPerYear < 1u then failwith "A product must be sold at least once a year."
         { Id = id
           Tasks = taskList
@@ -277,5 +230,3 @@ module JobShopData =
         getAllJobs jobShopData
         |> Seq.minBy (fun job -> job.ReleaseDate)
         |> fun job -> job.ReleaseDate
-
-
