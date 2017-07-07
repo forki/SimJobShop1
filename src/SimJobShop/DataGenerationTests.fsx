@@ -3,10 +3,13 @@
 open SimJobShop.Common
 #load "JobShopData.fs"
 open SimJobShop.JobShopData
+
+
+// ======================================
+// Data Generation
+// ======================================
 #load "JobShopDataGeneration.fs"
 open SimJobShop.JobShopDataGeneration
-
-
 
 (*
 Preis pro Maschinen-Stunde
@@ -15,7 +18,6 @@ Amortisationskosten von Maschinen!
 Was ist wenn ich eine Maschine nur 1 mal brauchen?
 Preis einer Maschine ist 
 *)
-
 
 let p = 
     { MachineCount = 10  // 20, 100
@@ -33,4 +35,28 @@ let p =
       JobCount = 1000 }
 
 let data = generateJobShopData 1 p
-JobShopData.writeDataToFiles """C:\Temp\test""" data
+JobShopData.writeDataToFiles """C:\Users\hols\Projekte\KTI_Complexity-4.0\Test\Generated""" data
+
+
+// ======================================
+// Simulation
+// ======================================
+#load "Engine.fs"
+open SimJobShop.Engine
+#load "JobShopModelOutputBuffers.fs"
+open SimJobShop.JobShopModelOutputBuffers
+
+
+let mutable eventsLog = List.empty<Event>
+let saveEvent event = eventsLog <- event::eventsLog
+let log = ignore // printfn "%s"
+
+let initial = initSimulation data
+
+
+#time
+let final = Simulation.run saveEvent log initial
+#time
+
+
+let r = eventsLog |> Seq.rev |> Event.writeEventsToFile "\t" """C:\Users\hols\Projekte\KTI_Complexity-4.0\Test\Generated\events.txt""" 

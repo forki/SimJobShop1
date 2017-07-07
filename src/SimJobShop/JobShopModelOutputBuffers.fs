@@ -1,4 +1,4 @@
-﻿module SimJobShop.JobShopModel
+﻿module SimJobShop.JobShopModelOutputBuffers
 
 open System
 open Common
@@ -188,9 +188,9 @@ type EventFact =
     | ChangeoverStarted of EntityId * LocationId * TimeSpan
     | ChangeoverEnded of EntityId * LocationId
     | MovedToLocation of EntityId * LocationId
-    | CapacityReleased of EntityId * LocationId * Capacity
     | ProcessingStarted of EntityId * LocationId
     | ProcessingEnded of EntityId * LocationId
+    | CapacityReleased of EntityId * LocationId * Capacity
 //    | EnteredOutputBuffer of EntityId * LocationId
 //    | LeftOutputBuffer of EntityId * LocationId
     | EntityAnnihilated of EntityId
@@ -221,12 +221,12 @@ module Event =
                 "ChangeoverEnded", Id.print entityId, Id.print locationId
             | MovedToLocation (entityId, locationId) ->
                 "MovedToLocation", Id.print entityId, Id.print locationId
-            | CapacityReleased (entityId, locationId, _) ->
-                "CapacityReleased", Id.print entityId, Id.print locationId
             | ProcessingStarted (entityId, locationId) ->
                 "ProcessingStarted", Id.print entityId, Id.print locationId
             | ProcessingEnded (entityId, locationId) ->
                 "ProcessingEnded", Id.print entityId, Id.print locationId
+            | CapacityReleased (entityId, locationId, _) ->
+                "CapacityReleased", Id.print entityId, Id.print locationId
             | EntityAnnihilated entityId ->
                 "EntityAnnihilated", Id.print entityId, "NA"
         [ timeStr; factStr; jobIdStr; machineIdStr ] |> String.concat separator
@@ -278,28 +278,36 @@ let execute (state:State) (command:Command) : Event list =
     | MoveToLocation (entityId, locationId) ->
         //TEMP: improve this implementation
         let fact1 = MovedToLocation (entityId, locationId)
-        let fact2option =
-            State.getEntity entityId state
-            |> fun entity -> entity.CurrentTask
-            |> Option.map (fun task -> CapacityReleased (entityId, task.MachineId, task.CapacityNeeded) )///
+//        let fact2option =
+//            State.getEntity entityId state
+//            |> fun entity -> entity.CurrentTask
+//            |> Option.map (fun task -> CapacityReleased (entityId, task.MachineId, task.CapacityNeeded) )///
         let fact3 = ProcessingStarted (entityId, locationId)
-        [ Some fact1; fact2option; Some fact3 ]
-        |> List.choose id
+//        [ Some fact1; fact2option; Some fact3 ]
+//        |> List.choose id
+        [ fact1; fact3 ]
         |> List.map (fun fact -> { Time = time; Fact = fact } )
 
     | EndProcessing (entityId, locationId) ->
-        
-        [ { Time = time; Fact = ProcessingEnded (entityId, locationId) } ]
+        State.getEntity entityId state
+        |> fun entity -> entity.CurrentTask
+        |> Option.map (fun task -> 
+            if task.MachineId <> locationId then failwith "Inconsistency => location and task.machineId don't match!"
+            CapacityReleased (entityId, task.MachineId, task.CapacityNeeded) )
+        |> Option.toList
+        |> fun facts -> (ProcessingEnded (entityId, locationId)) :: facts
+        |> List.map (fun fact -> { Time = time; Fact = fact })
 
     | AnnihilateEntity entityId ->
-        let fact1option =
-            State.getEntity entityId state
-            |> fun entity -> entity.CurrentTask
-            |> Option.map (fun task -> CapacityReleased (entityId, task.MachineId, task.CapacityNeeded) )
-        let fact2 = EntityAnnihilated entityId
-        [ fact1option; Some fact2 ]
-        |> List.choose id
-        |> List.map (fun fact -> { Time = time; Fact = fact } )
+//        let fact1option =
+//            State.getEntity entityId state
+//            |> fun entity -> entity.CurrentTask
+//            |> Option.map (fun task -> CapacityReleased (entityId, task.MachineId, task.CapacityNeeded) )
+//        let fact2 = EntityAnnihilated entityId
+//        [ fact1option; Some fact2 ]
+//        |> List.choose id
+//        |> List.map (fun fact -> { Time = time; Fact = fact } )
+        [ { Time = time; Fact = EntityAnnihilated entityId } ]
 
 //    | MoveToInputBuffer (entityId, locationId) -> EnteredInputBuffer (entityId, locationId)    
 //    | MoveToOutputBuffer (entityId, locationId) -> EnteredOutputBuffer (entityId, locationId)
@@ -352,13 +360,6 @@ let apply state event =
     | MovedToLocation (_, _) ->
         ({state with Time = time}, [])
 
-    | CapacityReleased (_, locationId, capacity) ->
-        let location = State.getLocation locationId state
-        let location' = Location.releaseCapacity capacity location
-        let state' = State.updateLocation location' state
-        let command = { Time = time; Action = TrySelectEntityFromWaitlist locationId }
-        ({state' with Time = time}, [command])
-
     | ProcessingStarted (entityId, locationId) ->
         let location = State.getLocation locationId state
         let entity = State.getEntity entityId state
@@ -393,6 +394,13 @@ let apply state event =
             | None -> AnnihilateEntity entityId
             | Some task -> EnterEntityInWaitlist (entityId, task.MachineId)
             |> fun action -> { Time = time; Action = action }
+        ({state' with Time = time}, [command])
+
+    | CapacityReleased (_, locationId, capacity) ->
+        let location = State.getLocation locationId state
+        let location' = Location.releaseCapacity capacity location
+        let state' = State.updateLocation location' state
+        let command = { Time = time; Action = TrySelectEntityFromWaitlist locationId }
         ({state' with Time = time}, [command])
 
     | EntityAnnihilated entityId ->

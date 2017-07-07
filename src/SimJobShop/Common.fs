@@ -118,6 +118,7 @@ module Capacity =
         | InfiniteCapacity -> "inf"
         | FiniteCapacity c -> sprintf "%i" c
 
+    let sum seq = Seq.fold add zero seq
 
 // ======================================
 // Result type
@@ -352,3 +353,9 @@ module Random =
         intSequence rnd 0 (n - 1) count
         |> Seq.toArray
         |> Array.map (fun i -> array.[i])
+
+
+module Option =
+    let getOrFailwith msg = function
+        | Some x -> x
+        | None -> failwith msg

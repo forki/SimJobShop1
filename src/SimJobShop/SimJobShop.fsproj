@@ -68,7 +68,8 @@
     <Compile Include="Engine.fs" />
     <Compile Include="JobShopData.fs" />
     <Compile Include="JobShopDataGeneration.fs" />
-    <Compile Include="JobShopModel.fs" />
+    <Compile Include="JobShopModelOutputBuffers.fs" />
+    <Compile Include="FlexibleJobShopModel.fs" />
     <Compile Include="FlexibleJobShopData.fs" />
     <None Include="RepositoryTests.fsx" />
     <None Include="ScheduleTests.fsx" />
@@ -76,6 +77,7 @@
     <None Include="DataGenerationTests.fsx" />
     <None Include="JobShopModelTests.fsx" />
     <None Include="Script.fsx" />
+    <Compile Include="JobShopModel.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />

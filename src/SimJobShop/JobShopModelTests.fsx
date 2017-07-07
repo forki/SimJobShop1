@@ -12,8 +12,8 @@ open SimJobShop.JobShopData
 #load "Engine.fs"
 open SimJobShop.Engine
 
-#load "JobShopModel.fs"
-open SimJobShop.JobShopModel
+#load "JobShopModelOutputBuffers.fs"
+open SimJobShop.JobShopModelOutputBuffers
 
 
 // ======================================
@@ -21,7 +21,7 @@ open SimJobShop.JobShopModel
 // ======================================
 let d0 = JobShopData.create () |> JobShopData.addDefaultMachines 2
 let machineIds = JobShopData.getAllMachineIds d0
-//let r = JobShopData.writeMachinesToFile "\t" """c:\temp\machines.txt""" d
+//let r = JobShopData.writeMachinesToFile "\t" """C:\Users\hols\Projekte\KTI_Complexity-4.0\Test""" d
 let m1 = machineIds |> Seq.head
 let m2 = machineIds |> Seq.skip 1 |> Seq.head
 let t1 = JobShopData.makeTask (m1, 0u, TimeSpan.FromHours(1.0), FiniteCapacity 1u) d0
@@ -38,7 +38,7 @@ let data =
     |> JobShopData.makeJob (p1, DateTime.Today, DateTime.Today.AddDays(2.0)) |> snd
 
 // write to files
-JobShopData.writeDataToFiles """C:\Temp\testSim""" data
+JobShopData.writeDataToFiles """C:\Users\hols\Projekte\KTI_Complexity-4.0\Test""" data
 
 
 // ======================================
@@ -64,8 +64,8 @@ let initial = initSimulation data
 
 let final = Simulation.run saveEvent log initial
 
-//let r = eventsLog |> Seq.rev |> Event.writeEventsToFile "\t" """C:\Temp\testSim\events.txt""" 
-let r = eventsLog |> Seq.rev |> Event.writeEventsToFile "\t" """C:\Temp\test\events.txt""" 
+//let r = eventsLog |> Seq.rev |> Event.writeEventsToFile "\t" """C:\Users\hols\Projekte\KTI_Complexity-4.0\Test\Generated\events.txt""" 
+let r = eventsLog |> Seq.rev |> Event.writeEventsToFile "\t" """C:\Users\hols\Projekte\KTI_Complexity-4.0\Test\events.txt""" 
 
 
 (*******************
@@ -156,122 +156,5 @@ Simulaten terminated: Schedule is empty
 
 
 ********************)
-
-
-
-
-
-
-
-
-
-
-
-
-
-//type JobShopData = 
-//    { Machines : Repository<Machine Id, Machine>
-//      Products : Repository<Product Id, Product>
-//      Jobs : Repository<Job Id, Job> }
-
-
-
-(************************************************************************
-type EntityId = EntityId of Guid
-type LocationId = LocationId of Guid
-type EntityTask = LocationId * TimeSpan
-type EntityJob = {JobId : Job Id; Tasks : EntityTask list}
-type EntityState = | Done | PendingTasks of EntityTask list
-type Entity = {Id : EntityId; JobId : Job Id; State : EntityState }
-type Location = {Id : LocationId; MachineId : Machine Id; CapacityTotal : Capacity; CapacityAvailable : Capacity; Waitlist : EntityId list}
-type State = {Time : DateTime; Entities : Repository<EntityId,Entity>; Locations : Repository<LocationId,Location>}
-
-[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
-module State =
-    /// Create the initial state from the given JobShopData
-    let empty =
-        // let time = earliest release date jobs
-        { Time = DateTime.Today
-          Entities = Repository.create (fun () -> Guid.NewGuid() |> EntityId)
-          Locations = Repository.create (fun () -> Guid.NewGuid() |> LocationId) }
-
-    let createLocation (machine : Machine) (state : State) =
-        let makeItem id =
-            { Id = id
-              MachineId = machine.Id
-              CapacityTotal = machine.Capacity
-              CapacityAvailable = machine.Capacity
-              Waitlist = [] }
-        let locationId, locationRepo = Repository.insert makeItem state.Locations
-        (locationId, {state with Locations = locationRepo})
-        
-
-    let create jobShopData =
-        Repository.getAllItems jobShopData.Machines
-        |> Seq.fold (fun state machine -> createLocation machine state |> snd) empty
-
-
-type CommandAction = 
-    | CreateEntityForJob of Job Id
-
-type EventFact = 
-    // An entity with this Id was created and moved to the source
-    | CreatedEntityForJob of Job Id
-
-type Time = DateTime
-type Command = Command<Time,CommandAction>
-type Event = { Time : Time; Fact : EventFact }
-
-
-let execute (state:State) (command:Command) : Event list =
-    match command.Action with
-    | CreateEntityForJob jobId -> []
-
-let apply (state:State) (event:Event) : (State * Command list) =
-    match event.Fact with
-    | CreatedEntityForJob jobId -> state, []
-
-
-************************************************************************)
-
-
-(**
-- locations represent machines, so they have
-    - capacity
-    - current load
-    - an input buffer with
-        - capacity
-        - current load
-- source location has infinite capacity and no input buffer
-- sink location  has infinite capacity and no input buffer
-
-- entities represent jobs, so they have
-    - a list of locations to visit for given durations
-    (- a list of locations that have been visited)
-
-
-questions
-- waiting lists for entities that want to move bu cannot yet?
-    - location view:
-        - after processing an entity in a location the entity is commanded 
-            - either to enlist in the waiting list of the machine for the next task
-            - or to move to the sink
-        - the location has capacity available and commands the next entity from the waiting list to move to the location
-    - when a location has capacity available it emits a command that the next entity from  its waiting list can be moved there.
-- state? where to hold the entities?
-- machine and buffer?
-- how to know which location an entity is in?
-
-**)
-
-(**
-let's ignore buffers for now 
-//type Buffer = {MachineId : MachineId; Capacity : Capacity; CapacityAvailable : Capacity}
-//type Process = {MachineId : MachineId; Capacity : Capacity; CapacityAvailable : Capacity; InputBuffer of Buffer}
-//type Location = | Source | Sink | Process of Process
-**)
-
-
-//type Waitinglist = 
 
 
