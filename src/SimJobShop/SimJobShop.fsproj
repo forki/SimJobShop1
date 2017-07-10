@@ -67,23 +67,42 @@
     <Compile Include="Common.fs" />
     <Compile Include="Engine.fs" />
     <Compile Include="JobShopData.fs" />
-    <Compile Include="JobShopDataGeneration.fs" />
     <Compile Include="JobShopModelOutputBuffers.fs" />
     <Compile Include="FlexibleJobShopModel.fs" />
-    <Compile Include="FlexibleJobShopData.fs" />
     <None Include="RepositoryTests.fsx" />
     <None Include="ScheduleTests.fsx" />
     <None Include="SimulationTests.fsx" />
-    <None Include="DataGenerationTests.fsx" />
     <None Include="JobShopModelTests.fsx" />
+    <None Include="DataGenerationTests.fsx" />
+    <None Include="FlexibleDataGenerationTests.fsx" />
     <None Include="Script.fsx" />
+    <Compile Include="FlexibleJobShopData.fs" />
+    <Compile Include="FlexibleJobShopDataGeneration.fs" />
     <Compile Include="JobShopModel.fs" />
+    <Compile Include="JobShopDataGeneration.fs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Excel">
+      <HintPath>..\..\packages\ExcelProvider\lib\Excel.dll</HintPath>
+      <Private>True</Private>
+      <Paket>True</Paket>
+    </Reference>
+    <Reference Include="ExcelProvider">
+      <HintPath>..\..\packages\ExcelProvider\lib\ExcelProvider.dll</HintPath>
+      <Private>True</Private>
+      <Paket>True</Paket>
+    </Reference>
+    <Reference Include="ICSharpCode.SharpZipLib">
+      <HintPath>..\..\packages\ExcelProvider\lib\ICSharpCode.SharpZipLib.dll</HintPath>
+      <Private>True</Private>
+      <Paket>True</Paket>
+    </Reference>
   </ItemGroup>
   <Choose>
     <When Condition="$(TargetFrameworkIdentifier) == '.NETFramework' And ($(TargetFrameworkVersion) == 'v2.0' Or $(TargetFrameworkVersion) == 'v3.0' Or $(TargetFrameworkVersion) == 'v3.5')">

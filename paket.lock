@@ -7,6 +7,7 @@ NUGET
       R.NET.Community.FSharp (>= 1.6.4)
       RProvider (>= 1.1.13)
     DynamicInterop (0.7.4)
+    ExcelProvider (0.8.2)
     FSharp.Charting (0.90.14)
     FSharp.Core (4.1.2) - redirects: force
       System.Collections (>= 4.0.11) - framework: >= netstandard16

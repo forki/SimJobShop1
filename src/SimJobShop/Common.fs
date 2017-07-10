@@ -23,6 +23,8 @@ module Id =
     /// Returns a string of the numeric value of the id.
     let print (Id id) = sprintf "%i" id
 
+    let ofInt id = id |> uint64 |> Id
+
 
 // ======================================
 // Units of measure
@@ -213,6 +215,14 @@ module Result =
         match xR with
         | Success x -> x
         | Failure e -> failwith e
+    
+    let isFailure = function
+        | Failure _ -> true
+        | _ -> false
+    
+    let isSuccess = function
+        | Success _ -> true
+        | _ -> false
 
 
 // ======================================
@@ -310,7 +320,8 @@ module Random =
     
     let makeGenerator seed = Random(seed)
     let bool (rnd : Random) probOfTrue = rnd.NextDouble() < probOfTrue
-    let int (rnd : Random) min max = rnd.Next(min, max)
+    /// Random integer between min and max including boundaries.
+    let int (rnd : Random) min max = rnd.Next(min, max + 1)
     let uniform (rnd : Random) min max = (max - min) * rnd.NextDouble() + min
     
     let normalSequenceInfinite (rnd : Random) mean sigma = 

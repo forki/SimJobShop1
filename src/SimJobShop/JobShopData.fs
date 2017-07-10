@@ -190,7 +190,6 @@ module JobShopData =
         let separator = "\t"
         [ writeMachinesToFile separator machinesFilename jobShopData
           writeProductsToFile separator productsFilename jobShopData
-          writeProductsToFile separator productsFilename jobShopData
           writeTasksToFile separator tasksFilename jobShopData
           writeJobsToFile separator jobsFilename jobShopData ]
         |> List.filter (function | Success _ -> false | Failure _ -> true)
