@@ -94,8 +94,11 @@ type MakeSchedule = FlexibleJobShopData -> JobShopData
 //      Jobs : Repository<Job Id, Job> }
  
 
+
+(******************** THIS IS WORK IN PROGRESS!!!!! **************)
+
 let makeRandomSchedule (flexData : FlexibleJobShopData) =
-    lat data0 = JobShopData.create()
+    let data0 = JobShopData.create()
     let data1 =
         FlexibleJobShopData.getAllMachines flexData
         |> Seq.filter (fun machine -> machine.SpeedFactor = 1.0)

@@ -3,6 +3,7 @@ source https://nuget.org/api/v2
 nuget ExcelProvider
 nuget FSharp.Core redirects: force
 nuget FsLab
+nuget Google.OrTools
 
 group Build
   source https://nuget.org/api/v2
