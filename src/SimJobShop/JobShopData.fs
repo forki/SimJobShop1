@@ -29,6 +29,7 @@ type Product =
     { Id : Product Id
       Tasks : Task list
       Price : float
+      Cost : float
       UnitsPerYear : uint32 }
 
 type Job = 
@@ -81,13 +82,15 @@ module Task =
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Product = 
-    let create id taskList price unitsPerYear = 
+    let create id taskList price cost unitsPerYear = 
         if List.length taskList < 1 then failwith "A product needs at least one task."
         if price < 0.0 then failwith "The price of a product cannot be negative."
+        if cost < 0.0 then failwith "The price of a product cannot be negative."
         if unitsPerYear < 1u then failwith "A product must be sold at least once a year."
         { Id = id
           Tasks = taskList
           Price = price
+          Cost = cost
           UnitsPerYear = unitsPerYear }
     
     let getFactory taskList price unitsPerYear = fun id -> create id taskList price unitsPerYear
@@ -209,8 +212,8 @@ module JobShopData =
         if not (containsMachineId machineId jobShopData) then failwith "The machineId for this task does not exist."
         Task.create machineId rank processingTime capacityNeeded
     
-    let makeProduct (taskList, price, unitsPerYear) jobShopData = 
-        let factory id = Product.create id taskList price unitsPerYear
+    let makeProduct (taskList, price, cost, unitsPerYear) jobShopData = 
+        let factory id = Product.create id taskList price cost unitsPerYear
         let (newId, newRepo) = Repository.insert factory jobShopData.Products
         (newId, { jobShopData with Products = newRepo })
     

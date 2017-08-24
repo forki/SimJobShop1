@@ -1,4 +1,12 @@
-﻿module SimJobShop.FlexibleJobShopModel
+﻿module SimJobShop.JobShopModelWithBuffers
+
+(* 
+UNFINISHED!
+
+This model is an attempt to incorporate finite capacity input/output buffers
+for the locations.
+*)
+
 
 open System
 //#load "Common.fs"

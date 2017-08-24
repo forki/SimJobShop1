@@ -1,18 +1,12 @@
-﻿open System
-
-#load "Common.fs"
-open SimJobShop.Common
-
-//#load "EventStore.fs"
-//open SimJobShop.EventStore
-
-#load "JobShopData.fs"
-open SimJobShop.JobShopData
-
+﻿#load "Common.fs"
 #load "Engine.fs"
-open SimJobShop.Engine
-
+#load "JobShopData.fs"
 #load "JobShopModelOutputBuffers.fs"
+
+open System
+open SimJobShop.Common
+open SimJobShop.Engine
+open SimJobShop.JobShopData
 open SimJobShop.JobShopModelOutputBuffers
 
 
@@ -65,7 +59,7 @@ let initial = initSimulation data
 let final = Simulation.run saveEvent log initial
 
 //let r = eventsLog |> Seq.rev |> Event.writeEventsToFile "\t" """C:\Users\hols\Projekte\KTI_Complexity-4.0\Test\Generated\events.txt""" 
-let r = eventsLog |> Seq.rev |> Event.writeEventsToFile "\t" """C:\Users\hols\Projekte\KTI_Complexity-4.0\Test\events.txt""" 
+let r = eventsLog |> Seq.rev |> Event.writeEventsToFile "\t" """C:\Users\hols\Projekte\KTI_Complexity-4.0\Test\events_now.txt""" 
 
 
 (*******************

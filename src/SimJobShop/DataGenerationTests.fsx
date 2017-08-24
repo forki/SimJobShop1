@@ -1,7 +1,8 @@
-﻿open System
-#load "Common.fs"
-open SimJobShop.Common
+﻿#load "Common.fs"
 #load "JobShopData.fs"
+
+open System
+open SimJobShop.Common
 open SimJobShop.JobShopData
 
 
@@ -32,18 +33,19 @@ let p =
       MinUnitsPerYear = 100
       MaxUnitsPerYear = 1000
       ProductCount = 20  // 120
-      JobCount = 1000 }
+      JobCount = 400//0
+      }
 
 let data = generateJobShopData 1 p
-JobShopData.writeDataToFiles """C:\Users\hols\Projekte\KTI_Complexity-4.0\Test\Generated""" data
+JobShopData.writeDataToFiles """C:\Users\hols\Projekte\KTI_Complexity-4.0\Test\Generated2""" data
 
 
 // ======================================
 // Simulation
 // ======================================
 #load "Engine.fs"
-open SimJobShop.Engine
 #load "JobShopModelOutputBuffers.fs"
+open SimJobShop.Engine
 open SimJobShop.JobShopModelOutputBuffers
 
 
@@ -58,5 +60,19 @@ let initial = initSimulation data
 let final = Simulation.run saveEvent log initial
 #time
 
+(*
+100 jobs: Real: 00:00:08.954, CPU: 00:00:08.953, GC gen0: 84, gen1: 1, gen2: 0
+200 jobs: Real: 00:00:17.960, CPU: 00:00:17.890, GC gen0: 167, gen1: 2, gen2: 0
+300 jobs: Real: 00:00:25.547, CPU: 00:00:25.531, GC gen0: 251, gen1: 3, gen2: 0
+400 jobs: Real: 00:00:35.700, CPU: 00:00:35.562, GC gen0: 337, gen1: 4, gen2: 0
 
-let r = eventsLog |> Seq.rev |> Event.writeEventsToFile "\t" """C:\Users\hols\Projekte\KTI_Complexity-4.0\Test\Generated\events.txt""" 
+derivative of time as a function of number of jobs
+2 : 1 => 0.9991064448
+3 : 1 => 0.9505566104
+3 : 2 => 0.9514067449
+4 : 1 => 0.9930190997
+4 : 2 => 0.9939072107
+4 : 3 => 1.044671184
+*)
+
+let r = eventsLog |> Seq.rev |> Event.writeEventsToFile "\t" """C:\Users\hols\Projekte\KTI_Complexity-4.0\Test\Generated2\events.txt""" 

@@ -1,26 +1,22 @@
-﻿open System
+﻿#r @"..\..\packages\ExcelProvider\lib\ExcelProvider.dll"
 #load "Common.fs"
-open SimJobShop.Common
 #load "FlexibleJobShopData.fs"
-open SimJobShop.FlexibleJobShopData
+#load "FlexibleJobShopDataGeneration.fs"
 
+open System
+open SimJobShop.Common
+open SimJobShop.FlexibleJobShopData
+open SimJobShop.FlexibleJobShopDataGeneration
+
+let OUTPUTDIRECTORY = """C:\Temp\Complexity"""
 
 // ======================================
 // Data Generation
 // ======================================
-#load "FlexibleJobShopDataGeneration.fs"
-open SimJobShop.FlexibleJobShopDataGeneration
-
-(*
-Preis pro Maschinen-Stunde
-
-Amortisationskosten von Maschinen!
-Was ist wenn ich eine Maschine nur 1 mal brauchen?
-Preis einer Maschine ist 
-*)
 
 let p = 
-    { MachineCount = 10  // 20, 100
+    { Phases = [1; 1; 1; 1; 2; 2; 2; 2; 3; 3; 3; 3; 4; 4; 4; 4; 5; 5; 5; 5]  // 20 Stages devided into 5 phases
+      MachinesPerStage = 2
       MinTaskCount = 5   // 8, 40
       MaxTaskCount = 8   // 15, 75
       MinProcessingTime = TimeSpan.FromMinutes(20.0)
@@ -36,35 +32,9 @@ let p =
       SlowMachinesMinSpeedFactor = 0.3
       SlowMachinesMaxSpeedFactor = 0.7 }
 
-let data = generateJobShopData 1 p
-FlexibleJobShopData.writeDataToFiles """C:\Users\hols\Projekte\KTI_Complexity-4.0\Test\GeneratedFlexible""" data
-
-
-
-// ======================================
-// Data from Excel
-// ======================================
-
-#r @"..\..\packages\ExcelProvider\lib\ExcelProvider.dll"
-open FSharp.ExcelProvider
-
-type SchindlerDataProvider = ExcelFile<"""C:\Users\hols\Projekte\KTI_Complexity-4.0\Daten\Schindler\data.xlsx""">
-let file = new SchindlerDataProvider()
-
-let products =
-    file.Data
-    |> Seq.mapi (fun i row -> 
-        i+1 |> uint64 |> Id, row.``Price per unit``, row.``Cost per unit``, row.``Units per year``)
-    // |> Seq.map (fun data -> Product.create )
-    // |> Seq.take 5 |> Seq.iter (printfn "%A")
-
-let products =
-    file.Data
-    |> Seq.mapi (fun i row ->
-        row.``Price per unit``, row.``Cost per unit``, row.Geschwindigkeit, row.Höhe, row.Gewicht)
-
-let n = Seq.length products
-let m = Seq.distinct products |> Seq.length
+//let data = generateJobShopData 1 p
+let data = generateJobShopDataFromRealData 42 p
+FlexibleJobShopData.writeDataToFiles OUTPUTDIRECTORY data
 
 
 
@@ -99,13 +69,29 @@ type MakeSchedule = FlexibleJobShopData -> JobShopData
 
 let makeRandomSchedule (flexData : FlexibleJobShopData) =
     let data0 = JobShopData.create()
+    // scheduling is allocation and sequencing
+    // scheduling jobs means that all jobs must be allocated to specific 
+    // machines in a specific sequence
+
+
+
+
+    // make non-flexible machines
     let data1 =
         FlexibleJobShopData.getAllMachines flexData
         |> Seq.filter (fun machine -> machine.SpeedFactor = 1.0)
-        |> Seq.fold (fun machine data -> JobShopData.makeMachine (machine.Capacity, machine.InputBufferSize) data |> snd) data0
+        |> Seq.fold (fun data machine -> JobShopData.makeMachine (machine.Capacity, machine.InputBufferCapacity) data |> snd) data0
+    // make non-flexible tasks
+
+    // make non-flexible products
+    let data2 =
+        FlexibleJobShopData.getAllProducts 
+    
 
 
     flexData
+
+
 
 
 
@@ -130,10 +116,13 @@ let log = ignore // printfn "%s"
 
 let initial = initSimulation data
 
-
 #time
 let final = Simulation.run saveEvent log initial
 #time
 
+let r = eventsLog |> Seq.rev |> Event.writeEventsToFile "\t" (OUTPUTDIRECTORY + """\events.txt""")
 
-let r = eventsLog |> Seq.rev |> Event.writeEventsToFile "\t" """C:\Users\hols\Projekte\KTI_Complexity-4.0\Test\Generated\events.txt""" 
+
+
+
+

@@ -62,8 +62,9 @@ let generateProducts (rnd : Random) p jobShopData =
         let taskCount = generateTaskCount rnd p
         let taskList = generateTaskList rnd p taskCount jobShopData
         let price = generatePrice rnd p
+        let cost = 0.88 * price
         let units = generateUnitsPerYear rnd p
-        (taskList, price, units)
+        (taskList, price, cost, units)
     
     let folder jsData productData = JobShopData.makeProduct productData jsData |> snd
     Seq.init p.ProductCount generateProductData |> Seq.fold folder jobShopData

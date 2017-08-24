@@ -21,9 +21,13 @@ module Id =
             Id lastId
     
     /// Returns a string of the numeric value of the id.
-    let print (Id id) = sprintf "%i" id
+    let print (Id i) = sprintf "%d" i
 
-    let ofInt id = id |> uint64 |> Id
+    let ofInt i = i |> uint64 |> Id
+
+    let value (Id i) = i
+
+    let toInt (Id i) = i |> int
 
 
 // ======================================
@@ -366,7 +370,75 @@ module Random =
         |> Array.map (fun i -> array.[i])
 
 
+
 module Option =
     let getOrFailwith msg = function
         | Some x -> x
         | None -> failwith msg
+
+
+module MoreMath =
+    open System
+
+    let minmax source =
+        Seq.fold (fun (l, u) x -> (min l x, max u x)) (Double.MaxValue, Double.MinValue) source
+
+    let binedges nBins source = 
+        let (mini, maxi) = minmax source
+        let width = (maxi - mini) / (float)nBins
+        Array.init (nBins + 1) (fun i -> mini + (float)i * width)
+
+    let getBinIndex edges x =
+        if (Array.length edges < 2) then failwith "there are not enough edges!"
+        let maxIdx = (Array.length edges) - 2
+        Array.tryFindIndex (fun e -> e > x) edges
+        |> function | Some i -> max (i - 1) 0 | None -> maxIdx
+
+    let makeBinning nBins source =
+        let edges = binedges nBins source
+        fun x -> getBinIndex edges x
+
+    let histcounts nBins source =
+        let getIndex = makeBinning nBins source
+        Array.countBy getIndex source
+        |> Array.sortBy fst
+
+
+
+
+
+/// Extensions to the fold functions for Seq (http://fssnip.net/2Z).
+module Seq = 
+    /// Executes a fold operation within a sequence returning a two-dimensional
+    /// tuple with the first element being the result of the fold and the second
+    /// being the count of the processed elements.
+    let public foldc folder first source =
+        source
+        |> Seq.fold (fun (prev, count) x -> (folder prev x, count + 1)) (first, 0)
+    
+    /// Executes a fold operation within a sequence passing as parameter of the
+    /// folder function the zero based index of each element.
+    let public foldi folder first source = 
+        source
+        |> Seq.fold (fun (prev, i) x -> (folder i prev x, i + 1)) (first, 0)
+        |> fst
+    
+    /// Executes a fold operation within a list passing as parameter of the folder
+    /// function the zero based index of each element and returning a two-
+    /// dimensional tuple with the first element being the result of the fold and
+    /// the second being the count of the processed elements.
+    let public foldic folder first source =
+        source
+        |> Seq.fold (fun (prev, i) x -> (folder i prev x, i + 1)) (first, 0)
+
+    /// Unzipping a sequence of 2-tuples into two sequences of values
+    let unzip sequence =
+        let (lstA, lstB) = 
+            Seq.foldBack (fun (a, b) (accA, accB) -> a::accA, b::accB) sequence ([], [])
+        (Seq.ofList lstA, Seq.ofList lstB)
+        
+    /// Unzipping a sequence of 3-tuples into three sequences of values
+    let unzip3 sequence =
+        let (lstA, lstB, lstC) = 
+            Seq.foldBack (fun (a, b, c) (accA, accB, accC) -> a::accA, b::accB, c::accC) sequence ([], [], [])
+        (Seq.ofList lstA, Seq.ofList lstB, Seq.ofList lstC)

@@ -1,5 +1,11 @@
 ﻿module SimJobShop.JobShopModel
 
+(*
+This model quickly runs into a deadlock because it has no input/output buffers.
+As soon as all locations (machines) are occupied (blocked) non of the jobs can 
+move to another location anymore.
+*)
+
 open System
 open Common
 open Engine
