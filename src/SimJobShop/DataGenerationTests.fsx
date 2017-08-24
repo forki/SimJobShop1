@@ -37,7 +37,7 @@ let p =
       }
 
 let data = generateJobShopData 1 p
-JobShopData.writeDataToFiles """C:\Users\hols\Projekte\KTI_Complexity-4.0\Test\Generated2""" data
+JobShopData.writeDataToFiles """C:\Temp\Test""" data
 
 
 // ======================================
@@ -75,4 +75,4 @@ derivative of time as a function of number of jobs
 4 : 3 => 1.044671184
 *)
 
-let r = eventsLog |> Seq.rev |> Event.writeEventsToFile "\t" """C:\Users\hols\Projekte\KTI_Complexity-4.0\Test\Generated2\events.txt""" 
+let r = eventsLog |> Seq.rev |> Event.writeEventsToFile "\t" """C:\Temp\Test\events.txt""" 

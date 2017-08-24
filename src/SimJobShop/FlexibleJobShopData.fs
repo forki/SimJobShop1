@@ -19,7 +19,7 @@ type Stage =
 type FlexibleMachine = 
     { Id : FlexibleMachine Id
       StageId : Stage Id
-      SpeedFactor : float  // -> 1, [0.5 1]
+      SpeedFactor : float // -> 1, [0.5 1]
       Capacity : Capacity
       InputBufferCapacity : Capacity }
 
@@ -50,17 +50,16 @@ type FlexibleJobShopData =
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Stage = 
-    let create id phase = { Stage.Id = id; Phase = phase }
+    let create id phase = 
+        { Stage.Id = id
+          Phase = phase }
     
-    let csvHeader separator =
-        [ "StageId"; "Phase" ]
-        |> String.concat separator
+    let csvHeader separator = [ "StageId"; "Phase" ] |> String.concat separator
     
-    let csvRecord separator (stage : Stage) =
+    let csvRecord separator (stage : Stage) = 
         [ Id.print stage.Id
           sprintf "%i" stage.Phase ]
         |> String.concat separator
-
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module FlexibleMachine = 
@@ -72,9 +71,8 @@ module FlexibleMachine =
           Capacity = capacity
           InputBufferCapacity = inputBufferSize }
     
-    let csvHeader separator =
-        [ "FlexibleMachineId"; "StageId"; "SpeedFactor"; "Capacity"; "InputBufferCapacity" ]
-        |> String.concat separator
+    let csvHeader separator = 
+        [ "FlexibleMachineId"; "StageId"; "SpeedFactor"; "Capacity"; "InputBufferCapacity" ] |> String.concat separator
     
     let csvRecord separator (machine : FlexibleMachine) = 
         [ Id.print machine.Id
@@ -94,7 +92,7 @@ module FlexibleTask =
           CapacityNeeded = capacityNeeded }
     
     let csvHeader separator = 
-        [ "FlexibleProductId"; "Rank"; "StageId"; "BaseProcessingTime_Minutes"; "CapacityNeeded" ]
+        [ "FlexibleProductId"; "Rank"; "StageId"; "BaseProcessingTime_Minutes"; "CapacityNeeded" ] 
         |> String.concat separator
     
     let csvRecord separator productId stageTask = 
@@ -118,12 +116,8 @@ module FlexibleProduct =
           Cost = cost
           UnitsPerYear = unitsPerYear }
     
-    let getFactory stageTaskList price unitsPerYear =
-        fun id -> create id stageTaskList price unitsPerYear
-
-    let csvHeader separator =
-        [ "FlexibleProductId"; "Price"; "Cost"; "UnitsPerYear" ]
-        |> String.concat separator
+    let getFactory stageTaskList price unitsPerYear = fun id -> create id stageTaskList price unitsPerYear
+    let csvHeader separator = [ "FlexibleProductId"; "Price"; "Cost"; "UnitsPerYear" ] |> String.concat separator
     
     let csvRecord separator (product : FlexibleProduct) = 
         [ Id.print product.Id
@@ -144,12 +138,9 @@ module FlexibleJob =
           ReleaseDate = releaseDate
           DueDate = dueDate }
     
-    let getFactory productId releaseDate dueDate =
-        fun id -> create id productId releaseDate dueDate
-
-    let csvHeader separator =
-        [ "FlexibleJobId"; "FlexibleProductId"; "ReleaseDate"; "DueDate" ]
-        |> String.concat separator
+    let getFactory productId releaseDate dueDate = fun id -> create id productId releaseDate dueDate
+    let csvHeader separator = 
+        [ "FlexibleJobId"; "FlexibleProductId"; "ReleaseDate"; "DueDate" ] |> String.concat separator
     
     let csvRecord separator (job : FlexibleJob) = 
         [ Id.print job.Id
@@ -232,8 +223,8 @@ module FlexibleJobShopData =
             |> Seq.iter sw.WriteLine
             |> Success
         with ex -> Failure ex.Message
-
-    let writeDataToFiles outFolder data =
+    
+    let writeDataToFiles outFolder data = 
         Directory.CreateDirectory(outFolder) |> ignore
         let stagesFilename = Path.Combine(outFolder, "stages.txt")
         let machinesFilename = Path.Combine(outFolder, "flexiblemachines.txt")
@@ -247,18 +238,19 @@ module FlexibleJobShopData =
           writeStageTasksToFile separator stageTasksFilename data
           writeJobsToFile separator jobsFilename data ]
         |> List.filter Result.isFailure
-        |> List.map (function | Success _ -> "" | Failure e -> e)
+        |> List.map (function 
+               | Success _ -> ""
+               | Failure e -> e)
         |> String.concat Environment.NewLine
-        |> function
-            | "" -> "Data written successfully to: " + outFolder
-            | errors -> "Errors occured while writing to: " + outFolder + Environment.NewLine + errors
+        |> function 
+        | "" -> "Data written successfully to: " + outFolder
+        | errors -> "Errors occured while writing to: " + outFolder + Environment.NewLine + errors
         |> printfn "%s"
-
-    let makeStage phase data =
+    
+    let makeStage phase data = 
         let factory id = Stage.create id phase
         let (newId, newRepo) = Repository.insert factory data.Stages
         (newId, { data with Stages = newRepo })
-
     
     let makeMachine (stageId, capacity, speedFactor, inputBufferSize) data = 
         let factory id = FlexibleMachine.create id stageId capacity speedFactor inputBufferSize
@@ -279,8 +271,8 @@ module FlexibleJobShopData =
         let factory id = FlexibleJob.create id productId releaseDate dueDate
         let (newId, newRepo) = Repository.insert factory data.Jobs
         (newId, { data with Jobs = newRepo })
-
-    let addStages phases data =
+    
+    let addStages phases data = 
         let folder data phase = makeStage phase data |> snd
         phases |> Seq.fold folder data
     
@@ -292,9 +284,8 @@ module FlexibleJobShopData =
         getAllStageIds data
         |> Seq.map (fun stageId -> (stageId, capacity, speedFactor, inputBufferSize))
         |> Seq.fold folder data
-
-    let getEarliestReleaseDate data =
+    
+    let getEarliestReleaseDate data = 
         getAllJobs data
         |> Seq.minBy (fun job -> job.ReleaseDate)
         |> fun job -> job.ReleaseDate
-

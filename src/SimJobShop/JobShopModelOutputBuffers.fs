@@ -115,12 +115,12 @@ module State =
     /// Create a new entity based on a given job.
     /// This assumes that job.Id is unique!
     let createEntity (jobId : Job Id) (state : State) = 
-        let jobResult = JobShopData.getJob jobId state.Data
-        let productResult = jobResult |> Result.bindR (fun job -> JobShopData.getProduct job.ProductId state.Data)
-        Result.lift2R (fun job product -> 
-            { JobId = job.Id
-              PendingTasks = product.Tasks
-              CurrentTask = None }) jobResult productResult
+        state.Data
+        |> JobShopData.getJob jobId
+        |> Result.mapR (fun job -> 
+               { JobId = job.Id
+                 PendingTasks = job.Tasks
+                 CurrentTask = None })
         |> Result.mapR (fun entity -> entity, addEntity state entity)
         |> Result.getValue
     
@@ -247,15 +247,12 @@ type Command = Command<Time, CommandAction>
 let execute (state : State) (command : Command) : Event list = 
     let time = command.Time
     match command.Action with
-
     | CreateEntity entityData -> 
         [ { Time = time
             Fact = EntityCreated entityData } ]
-
     | EnterEntityInWaitlist(entityId, locationId) -> 
         [ { Time = time
             Fact = EntityEnteredInWaitlist(entityId, locationId) } ]
-
     | TrySelectEntityFromWaitlist locationId -> 
         let location = State.getLocation locationId state
         Location.trySelectEntityFromWaitlist location
@@ -272,11 +269,9 @@ let execute (state : State) (command : Command) : Event list =
         |> List.map (fun fact -> 
                { Time = time
                  Fact = fact })
-
     | EndChangeover(entityId, locationId) -> 
         [ { Time = time
             Fact = ChangeoverEnded(entityId, locationId) } ]
-
     | MoveToLocation(entityId, locationId) -> 
         //TEMP: improve this implementation
         let fact1 = MovedToLocation(entityId, locationId)
@@ -290,7 +285,6 @@ let execute (state : State) (command : Command) : Event list =
           fact1; fact3 ] |> List.map (fun fact -> 
                                 { Time = time
                                   Fact = fact })
-
     | EndProcessing(entityId, locationId) -> 
         State.getEntity entityId state
         |> fun entity -> entity.CurrentTask
@@ -302,7 +296,6 @@ let execute (state : State) (command : Command) : Event list =
         |> List.map (fun fact -> 
                { Time = time
                  Fact = fact })
-
     | AnnihilateEntity entityId -> 
         [ { //        let fact1option =
             //            State.getEntity entityId state
@@ -317,12 +310,9 @@ let execute (state : State) (command : Command) : Event list =
 
 //    | MoveToInputBuffer (entityId, locationId) -> EnteredInputBuffer (entityId, locationId)    
 //    | MoveToOutputBuffer (entityId, locationId) -> EnteredOutputBuffer (entityId, locationId)
-
-
 let apply state event = 
     let time = event.Time
     match event.Fact with
-
     | EntityCreated jobId -> 
         let entity, state' = State.createEntity jobId state
         
@@ -334,7 +324,6 @@ let apply state event =
                 { Time = time
                   Action = action }
         ({ state' with Time = time }, [ command ])
-
     | EntityEnteredInWaitlist(entityId, locationId) -> 
         let location = State.getLocation locationId state
         let location' = Location.addToWaitlist entityId location
@@ -344,13 +333,11 @@ let apply state event =
             { Time = time
               Action = TrySelectEntityFromWaitlist locationId }
         ({ state' with Time = time }, [ command ])
-
     | EntitySelectedFromWaitlist(entityId, locationId) -> 
         let location = State.getLocation locationId state
         let location' = Location.removeEntityFromWaitlist entityId location
         let state' = State.updateLocation location' state
         ({ state' with Time = time }, [])
-
     | CapacityBlocked(entityId, locationId, capacity) -> 
         let location = State.getLocation locationId state
         // TEMP: consistency checks
@@ -361,21 +348,17 @@ let apply state event =
         let location' = Location.blockCapacity capacity location
         let state' = State.updateLocation location' state
         ({ state' with Time = time }, [])
-
     | ChangeoverStarted(entityId, locationId, changeoverTime) -> 
         let command = 
             { Time = time.Add changeoverTime
               Action = EndChangeover(entityId, locationId) }
         ({ state with Time = time }, [ command ])
-
     | ChangeoverEnded(entityId, locationId) -> 
         let command = 
             { Time = time
               Action = MoveToLocation(entityId, locationId) }
         ({ state with Time = time }, [ command ])
-
     | MovedToLocation(_, _) -> ({ state with Time = time }, [])
-
     | ProcessingStarted(entityId, locationId) -> 
         let location = State.getLocation locationId state
         let entity = State.getEntity entityId state
@@ -396,7 +379,6 @@ let apply state event =
             { Time = time.Add task.ProcessingTime
               Action = EndProcessing(entityId, locationId) }
         ({ state' with Time = time }, [ command ])
-
     | ProcessingEnded(entityId, locationId) -> 
         let entity = State.getEntity entityId state
         
@@ -418,7 +400,6 @@ let apply state event =
                 { Time = time
                   Action = action }
         ({ state' with Time = time }, [ command ])
-
     | CapacityReleased(_, locationId, capacity) -> 
         let location = State.getLocation locationId state
         let location' = Location.releaseCapacity capacity location
@@ -428,7 +409,6 @@ let apply state event =
             { Time = time
               Action = TrySelectEntityFromWaitlist locationId }
         ({ state' with Time = time }, [ command ])
-
     | EntityAnnihilated entityId -> 
         // TEMP: consistency check
         match State.getEntity entityId state |> Entity.getNextTask with
@@ -452,10 +432,6 @@ let private initSchedule jobShopData =
     |> Schedule.ofSeq
 
 let initSimulation jobShopData = Simulation.createInitial (initModel jobShopData) (initSchedule jobShopData)
-
-
-
-
 (**
 
 /// Represents the current state of the system and holds all locations. 
@@ -499,6 +475,9 @@ module State =
 Execute: Can a command always be turned into events or can there be failures?
 Apply: Can an event always be applied or can there be failures?
 *)
+
+
+
 
 
 

@@ -164,4 +164,3 @@ module Simulation =
     /// Create a new simulation using the initial state of the model as initial state
     /// for the simulation.
     let createInitial model schedule = create model model.InitialState schedule
-    

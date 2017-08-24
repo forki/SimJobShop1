@@ -9,42 +9,42 @@ open SimJobShop.Engine
 open SimJobShop.JobShopData
 open SimJobShop.JobShopModelOutputBuffers
 
-
 // ======================================
 // Test data
 // ======================================
-let d0 = JobShopData.create () |> JobShopData.addDefaultMachines 2
+let d0 = JobShopData.create() |> JobShopData.addDefaultMachines 2
 let machineIds = JobShopData.getAllMachineIds d0
 //let r = JobShopData.writeMachinesToFile "\t" """C:\Users\hols\Projekte\KTI_Complexity-4.0\Test""" d
 let m1 = machineIds |> Seq.head
 let m2 = machineIds |> Seq.skip 1 |> Seq.head
+
 let t1 = JobShopData.makeTask (m1, 0u, TimeSpan.FromHours(1.0), FiniteCapacity 1u) d0
 let t2 = JobShopData.makeTask (m2, 1u, TimeSpan.FromHours(2.0), FiniteCapacity 1u) d0
-//let p1, d1 = JobShopData.makeProduct ([t1; t2; {t1 with Rank=2u}], 2.5, 250u) d0
-let p1, d1 = JobShopData.makeProduct ([t1; t2], 2.5, 250u) d0
-let p2, d2 = JobShopData.makeProduct ([{t2 with Rank=0u}; {t1 with Rank=1u}], 3.0, 120u) d1
 
+let p1, d1 = JobShopData.makeProduct (3.0, 2.5, 250u) d0
+let p2, d2 = JobShopData.makeProduct (4.0, 3.0, 120u) d1
 
 // some jobs
+let tasklist1 = [ t1; t2 ]
+let tasklist2 = [ { t2 with Rank = 0u }; { t1 with Rank = 1u } ]
 let data = 
     d2
-    |> JobShopData.makeJob (p1, DateTime.Today, DateTime.Today.AddDays(2.0)) |> snd
-    |> JobShopData.makeJob (p1, DateTime.Today, DateTime.Today.AddDays(2.0)) |> snd
+    |> JobShopData.makeJob (p1, tasklist1, DateTime.Today, DateTime.Today.AddDays(2.0))
+    |> snd
+    |> JobShopData.makeJob (p1, tasklist2, DateTime.Today, DateTime.Today.AddDays(2.0))
+    |> snd
 
 // write to files
-JobShopData.writeDataToFiles """C:\Users\hols\Projekte\KTI_Complexity-4.0\Test""" data
-
+JobShopData.writeDataToFiles """C:\Temp\Test""" data
 
 // ======================================
 // Simulation
 // ======================================
 let mutable eventsLog = List.empty<Event>
-let saveEvent event = eventsLog <- event::eventsLog
+let saveEvent event = eventsLog <- event :: eventsLog
 let log = printfn "%s"
 let step sim = Simulation.evolveSim saveEvent log sim
-
 let initial = initSimulation data
-
 //let sim1 = step initial
 //let sim2 = step sim1
 //let sim3 = step sim2
@@ -55,13 +55,13 @@ let initial = initSimulation data
 //let sim8 = step sim7
 //let sim9 = step sim8
 //let sim10 = step sim9
-
 let final = Simulation.run saveEvent log initial
 
 //let r = eventsLog |> Seq.rev |> Event.writeEventsToFile "\t" """C:\Users\hols\Projekte\KTI_Complexity-4.0\Test\Generated\events.txt""" 
-let r = eventsLog |> Seq.rev |> Event.writeEventsToFile "\t" """C:\Users\hols\Projekte\KTI_Complexity-4.0\Test\events_now.txt""" 
-
-
+let r = 
+    eventsLog
+    |> Seq.rev
+    |> Event.writeEventsToFile "\t" """C:\Temp\Test\events_now.txt"""
 (*******************
 
 Event '{Time = 12.06.2017 00:00:00;

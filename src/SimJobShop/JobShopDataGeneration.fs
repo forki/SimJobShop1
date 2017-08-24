@@ -35,7 +35,6 @@ let generateTaskCount (rnd : Random) p =
     Random.int rnd p.MinTaskCount p.MaxTaskCount
 
 let generatePrice (rnd : Random) p = Random.uniform rnd p.MinPrice p.MinPrice
-
 let generateUnitsPerYear (rnd : Random) p = Random.int rnd p.MinUnitsPerYear p.MaxUnitsPerYear |> uint32
 
 let generateTaskList (rnd : Random) p count jobShopData = 
@@ -54,17 +53,14 @@ let generateTaskList (rnd : Random) p count jobShopData =
     |> Seq.map (fun data -> JobShopData.makeTask data jobShopData)
     |> Seq.toList
 
-let generateMachines (_ : Random) p jobShopData = 
-    JobShopData.addDefaultMachines p.MachineCount jobShopData
+let generateMachines (_ : Random) p jobShopData = JobShopData.addDefaultMachines p.MachineCount jobShopData
 
 let generateProducts (rnd : Random) p jobShopData = 
     let generateProductData _ = 
-        let taskCount = generateTaskCount rnd p
-        let taskList = generateTaskList rnd p taskCount jobShopData
         let price = generatePrice rnd p
         let cost = 0.88 * price
         let units = generateUnitsPerYear rnd p
-        (taskList, price, cost, units)
+        (price, cost, units)
     
     let folder jsData productData = JobShopData.makeProduct productData jsData |> snd
     Seq.init p.ProductCount generateProductData |> Seq.fold folder jobShopData
@@ -77,7 +73,10 @@ let generateJobs (rnd : Random) p jobShopData =
     |> Seq.toArray
     |> Random.sampleReplace rnd p.JobCount
     |> Array.toSeq
-    |> Seq.map (fun productId -> (productId, releaseDate, dueDate))
+    |> Seq.map (fun productId -> 
+           let taskcount = generateTaskCount rnd p
+           let tasklist = generateTaskList rnd p taskcount jobShopData
+           (productId, tasklist, releaseDate, dueDate))
     |> Seq.fold folder jobShopData
 
 let generateJobShopData seed p = 

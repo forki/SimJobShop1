@@ -16,8 +16,7 @@ Invariants in the JobShopData Aggregate
 type Machine = 
     { Id : Machine Id
       Capacity : Capacity
-      InputBufferCapacity : Capacity
-      }
+      InputBufferCapacity : Capacity }
 
 type Task = 
     { MachineId : Machine Id
@@ -27,7 +26,6 @@ type Task =
 
 type Product = 
     { Id : Product Id
-      Tasks : Task list
       Price : float
       Cost : float
       UnitsPerYear : uint32 }
@@ -35,6 +33,7 @@ type Product =
 type Job = 
     { Id : Job Id
       ProductId : Product Id
+      Tasks : Task list
       ReleaseDate : DateTime
       DueDate : DateTime }
 
@@ -42,7 +41,6 @@ type JobShopData =
     { Machines : Repository<Machine Id, Machine>
       Products : Repository<Product Id, Product>
       Jobs : Repository<Job Id, Job> }
-
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Machine = 
@@ -70,7 +68,7 @@ module Task =
           CapacityNeeded = capacityNeeded }
     
     let csvHeader separator = 
-        [ "ProductId"; "Rank"; "MachineId"; "ProcessingTime"; "CapacityNeeded" ] |> String.concat separator
+        [ "JobId"; "Rank"; "MachineId"; "ProcessingTime"; "CapacityNeeded" ] |> String.concat separator
     
     let csvRecord separator productId (task : Task) = 
         [ Id.print productId
@@ -82,39 +80,36 @@ module Task =
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Product = 
-    let create id taskList price cost unitsPerYear = 
-        if List.length taskList < 1 then failwith "A product needs at least one task."
+    let create id price cost unitsPerYear = 
         if price < 0.0 then failwith "The price of a product cannot be negative."
         if cost < 0.0 then failwith "The price of a product cannot be negative."
         if unitsPerYear < 1u then failwith "A product must be sold at least once a year."
         { Id = id
-          Tasks = taskList
           Price = price
           Cost = cost
           UnitsPerYear = unitsPerYear }
     
-    let getFactory taskList price unitsPerYear = fun id -> create id taskList price unitsPerYear
-    let csvHeader separator = [ "Id"; "Price"; "UnitsPerYear" ] |> String.concat separator
+    let getFactory price cost unitsPerYear = fun id -> create id price cost unitsPerYear
+    let csvHeader separator = [ "Id"; "Price"; "Cost"; "UnitsPerYear" ] |> String.concat separator
     
     let csvRecord separator (product : Product) = 
         [ Id.print product.Id
           sprintf "%.2f" product.Price
+          sprintf "%.2f" product.Cost
           sprintf "%i" product.UnitsPerYear ]
         |> String.concat separator
-    
-    let csvRecordsOfTasks separator (product : Product) = 
-        let taskToRecord = Task.csvRecord separator product.Id
-        product.Tasks |> Seq.map taskToRecord
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module Job = 
-    let create id productId releaseDate dueDate = 
+    let create id productId tasklist releaseDate dueDate = 
+        if List.length tasklist < 1 then failwith "A product needs at least one task."
         { Id = id
           ProductId = productId
+          Tasks = tasklist
           ReleaseDate = releaseDate
           DueDate = dueDate }
     
-    let getFactory productId releaseDate dueDate = fun id -> create id productId releaseDate dueDate
+    let getFactory productId tasklist releaseDate dueDate = fun id -> create id productId tasklist releaseDate dueDate
     let csvHeader separator = [ "Id"; "ProductId"; "ReleaseDate"; "DueDate" ] |> String.concat separator
     
     let csvRecord separator (job : Job) = 
@@ -123,6 +118,10 @@ module Job =
           sprintf "%A" job.ReleaseDate
           sprintf "%A" job.DueDate ]
         |> String.concat separator
+    
+    let csvRecordsOfTasks separator (job : Job) = 
+        let taskToRecord = Task.csvRecord separator job.Id
+        job.Tasks |> Seq.map taskToRecord
 
 [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
 module JobShopData = 
@@ -168,8 +167,8 @@ module JobShopData =
         try 
             use sw = new StreamWriter(path)
             sw.WriteLine(Task.csvHeader separator)
-            getAllProducts jobShopData
-            |> Seq.collect (Product.csvRecordsOfTasks separator)
+            getAllJobs jobShopData
+            |> Seq.collect (Job.csvRecordsOfTasks separator)
             |> Seq.iter sw.WriteLine
             |> Success
         with ex -> Failure ex.Message
@@ -183,8 +182,8 @@ module JobShopData =
             |> Seq.iter sw.WriteLine
             |> Success
         with ex -> Failure ex.Message
-
-    let writeDataToFiles outFolder jobShopData =
+    
+    let writeDataToFiles outFolder jobShopData = 
         Directory.CreateDirectory(outFolder) |> ignore
         let machinesFilename = Path.Combine(outFolder, "machines.txt")
         let productsFilename = Path.Combine(outFolder, "products.txt")
@@ -195,12 +194,16 @@ module JobShopData =
           writeProductsToFile separator productsFilename jobShopData
           writeTasksToFile separator tasksFilename jobShopData
           writeJobsToFile separator jobsFilename jobShopData ]
-        |> List.filter (function | Success _ -> false | Failure _ -> true)
-        |> List.map (function | Success _ -> "" | Failure e -> e)
+        |> List.filter (function 
+               | Success _ -> false
+               | Failure _ -> true)
+        |> List.map (function 
+               | Success _ -> ""
+               | Failure e -> e)
         |> String.concat Environment.NewLine
-        |> function
-            | "" -> "Data written successfully to: " + outFolder
-            | errors -> "Errors occured while writing to: " + outFolder + Environment.NewLine + errors
+        |> function 
+        | "" -> "Data written successfully to: " + outFolder
+        | errors -> "Errors occured while writing to: " + outFolder + Environment.NewLine + errors
         |> printfn "%s"
     
     let makeMachine (capacity, inputBufferSize) jobShopData = 
@@ -212,14 +215,14 @@ module JobShopData =
         if not (containsMachineId machineId jobShopData) then failwith "The machineId for this task does not exist."
         Task.create machineId rank processingTime capacityNeeded
     
-    let makeProduct (taskList, price, cost, unitsPerYear) jobShopData = 
-        let factory id = Product.create id taskList price cost unitsPerYear
+    let makeProduct (price, cost, unitsPerYear) jobShopData = 
+        let factory id = Product.create id price cost unitsPerYear
         let (newId, newRepo) = Repository.insert factory jobShopData.Products
         (newId, { jobShopData with Products = newRepo })
     
-    let makeJob (productId, releaseDate, dueDate) jobShopData = 
+    let makeJob (productId, taskList, releaseDate, dueDate) jobShopData = 
         if not (containsProductId productId jobShopData) then failwith "The productId for this job does not exist."
-        let factory id = Job.create id productId releaseDate dueDate
+        let factory id = Job.create id productId taskList releaseDate dueDate
         let (newId, newRepo) = Repository.insert factory jobShopData.Jobs
         (newId, { jobShopData with Jobs = newRepo })
     
@@ -227,8 +230,8 @@ module JobShopData =
         let defaultMachineData = (FiniteCapacity 1u, FiniteCapacity 0u)
         let folder jobShopData machineData = makeMachine machineData jobShopData |> snd
         Seq.init count (fun _ -> defaultMachineData) |> Seq.fold folder jobShopData
-
-    let getEarliestReleaseDate jobShopData =
+    
+    let getEarliestReleaseDate jobShopData = 
         getAllJobs jobShopData
         |> Seq.minBy (fun job -> job.ReleaseDate)
         |> fun job -> job.ReleaseDate
