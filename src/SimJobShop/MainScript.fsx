@@ -48,22 +48,6 @@ FlexibleJobShopData.writeDataToFiles OUTPUTDIRECTORY flexData
 // ======================================
 
 
-
-type MakeSchedule = FlexibleJobShopData -> JobShopData
-
-//type FlexibleJobShopData = 
-//    { Stages : Repository<Stage Id, Stage>
-//      Machines : Repository<Machine Id, Machine>
-//      Products : Repository<Product Id, Product>
-//      Jobs : Repository<Job Id, Job> }
-
-//type JobShopData = 
-//    { Machines : Repository<Machine Id, Machine>
-//      Products : Repository<Product Id, Product>
-//      Jobs : Repository<Job Id, Job> }
-
-
-
 let data0 = JobShopData.create()
 
 let (machineMap, data1) =
@@ -86,8 +70,6 @@ let (productMap, data2) =
 
 
 
-let rnd = Random.makeGenerator 42
-
 let allocateTask rnd flexData flexTask =
     flexData
     |> FlexibleJobShopData.getAllMachines
@@ -98,25 +80,33 @@ let allocateTask rnd flexData flexTask =
 
 
 
-
+let rnd = Random.makeGenerator 42
+let allocate = allocateTask rnd flexData
 
 let (jobMap, data) =
     flexData
     |> FlexibleJobShopData.getAllJobs
     |> Seq.fold (fun (map, data) flexJob -> 
         let tasklist = 
-        //PLAN: get productId -> get Product -> get tasklist -> allocate tasks -> flexMachineId ....
-
-
-
-            flexProduct.FlexibleTasks
-//            |> List.map (fun flexTask -> 
-//                let machineId = flexTask.StageId
-//                let rank = flexTask.Rank
-//                let processingTime = flexTask.BaseProcessingTime //TODO multiply be SpeedFactor
-//                let capacityNeeded = flexTask.CapacityNeeded
-//                JobShopData.makeTask (machineId, rank, processingTime, capacityNeeded) data
-//                )
+            flexData
+            |> FlexibleJobShopData.getProduct flexJob.ProductId
+            |> Result.mapR (fun flexProduct -> 
+                flexProduct.FlexibleTasks
+                |> List.map (fun flexTask -> 
+                    let flexMachineId = flexTask |> allocate
+                    let machineId = Map.find flexMachineId machineMap
+                    let processingTime = 
+                        FlexibleJobShopData.getMachine flexMachineId flexData
+                        |> Result.mapR (fun flexMachine -> 
+                            flexTask.BaseProcessingTime.TotalMinutes
+                            |> (*) flexMachine.SpeedFactor
+                            |> TimeSpan.FromMinutes
+                            )
+                        |> Result.getValue
+                    JobShopData.makeTask (machineId, flexTask.Rank, processingTime, flexTask.CapacityNeeded) data1
+                    )
+                )
+            |> Result.getValue
         let productId = Map.find flexJob.ProductId productMap
         JobShopData.makeJob (productId, tasklist, flexJob.ReleaseDate, flexJob.DueDate) data
         |> fun (jobId, data) -> 
@@ -124,43 +114,7 @@ let (jobMap, data) =
         ) (Map.empty, data2)
 
 
-
-
-
-
-
-
-(******************** THIS IS WORK IN PROGRESS!!!!! **************)
-
-let makeRandomSchedule (flexData : FlexibleJobShopData) =
-    let data0 = JobShopData.create()
-    // scheduling is allocation and sequencing
-    // scheduling jobs means that all jobs must be allocated to specific 
-    // machines in a specific sequence
-
-
-
-
-    // make non-flexible machines
-    let data1 =
-        FlexibleJobShopData.getAllMachines flexData
-        |> Seq.filter (fun machine -> machine.SpeedFactor = 1.0)
-        |> Seq.fold (fun data machine -> JobShopData.makeMachine (machine.Capacity, machine.InputBufferCapacity) data |> snd) data0
-    // make non-flexible tasks
-
-    // make non-flexible products
-    let data2 =
-        FlexibleJobShopData.getAllProducts 
-    
-
-
-    flexData
-
-
-
-
-
-
+JobShopData.writeDataToFiles (OUTPUTDIRECTORY + """\ScheduledRandom""") data
 
 
 
@@ -170,8 +124,8 @@ let makeRandomSchedule (flexData : FlexibleJobShopData) =
 // Simulation
 // ======================================
 #load "Engine.fs"
-open SimJobShop.Engine
 #load "JobShopModelOutputBuffers.fs"
+open SimJobShop.Engine
 open SimJobShop.JobShopModelOutputBuffers
 
 
@@ -185,9 +139,6 @@ let initial = initSimulation data
 let final = Simulation.run saveEvent log initial
 #time
 
-let r = eventsLog |> Seq.rev |> Event.writeEventsToFile "\t" (OUTPUTDIRECTORY + """\events.txt""")
-
-
-
+let r = eventsLog |> Seq.rev |> Event.writeEventsToFile "\t" (OUTPUTDIRECTORY + """\ScheduledRandom\events.txt""")
 
 
