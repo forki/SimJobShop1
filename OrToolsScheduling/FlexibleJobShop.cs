@@ -4,9 +4,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static IAS.Optimizer.OrTools.FlexibleJobShopData;
+using static OrToolsScheduling.FlexibleJobShopData;
 
-namespace IAS.Optimizer.OrTools
+namespace OrToolsScheduling
 {
     public class FlexibleJobShopData
     {

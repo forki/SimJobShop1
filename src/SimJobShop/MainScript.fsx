@@ -99,7 +99,7 @@ let (jobMap, data) =
                         FlexibleJobShopData.getMachine flexMachineId flexData
                         |> Result.mapR (fun flexMachine -> 
                             flexTask.BaseProcessingTime.TotalMinutes
-                            |> (*) flexMachine.SpeedFactor
+                            |> (*) (1.0 / flexMachine.SpeedFactor)
                             |> TimeSpan.FromMinutes
                             )
                         |> Result.getValue
