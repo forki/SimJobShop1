@@ -22,6 +22,7 @@ type Parameters =
       MaxUnitsPerYear : int
       ProductCount : int
       JobCount : int
+      ThreasholdUnitsPerYear : int
       SlowMachinesMinSpeedFactor : double
       SlowMachinesMaxSpeedFactor : double }
 
@@ -123,6 +124,18 @@ let generateProductsFromRealData (rnd : Random) p data =
             (MoreMath.makeBinning nBins vs, MoreMath.makeBinning nBins ms, MoreMath.makeBinning nBins hs)
     
     let meanCost = file.Data |> Seq.averageBy (fun row -> row.``Cost per unit``)
+    let stdCost =
+        file.Data 
+        |> Seq.sumBy (fun row -> (row.``Cost per unit`` - meanCost)**2.0)
+        |> fun x -> x / (float)(Seq.length file.Data) |> sqrt
+    let getProcessingTime (rnd : Random) p c =
+        let x =
+            if c < meanCost - 0.5 * stdCost then Random.uniform rnd 0.0 1.0
+            else if c > meanCost + 0.5 * stdCost then Random.uniform rnd 1.0 2.0
+            else Random.uniform rnd 0.5 1.5
+            |> round |> (*) 0.5
+        p.MinProcessingTime.TotalMinutes + x * (p.MaxProcessingTime.TotalMinutes - p.MinProcessingTime.TotalMinutes)
+        |> TimeSpan.FromMinutes
     
     // helpers
     let arrayIndexFilter filter = 
@@ -155,10 +168,11 @@ let generateProductsFromRealData (rnd : Random) p data =
                | _ -> failwith "Only 5 stages are allowed!")
         |> Array.collect id
         |> Array.mapi (fun i stage -> 
-               stage.Id, i |> uint32, 
-               row.``Cost per unit`` / meanCost
-               |> limit 0.5 2.0
-               |> generateProcessingTime rnd p, generateCapacityNeeded rnd p)
+            let id = i |> uint32
+            let processingTime = getProcessingTime rnd p row.``Cost per unit``
+            let capNeeded = generateCapacityNeeded rnd p
+            (stage.Id, id, processingTime, capNeeded)
+            )
         |> Array.map (fun taskData -> FlexibleJobShopData.makeTask taskData jsData)
         |> Array.toList
     
@@ -174,22 +188,18 @@ let generateProductsFromRealData (rnd : Random) p data =
     let makeProductFolder jsData productData = FlexibleJobShopData.makeProduct productData jsData |> snd
     productData |> Seq.fold makeProductFolder data
 
-let generateJobsFromRealData (rnd : Random) _ data = 
+let generateJobsFromRealData (rnd : Random) p data = 
     let releaseDate = DateTime.Today
     let dueDate = releaseDate.AddDays(5.0)
     let makeJobFolder jsData jobData = FlexibleJobShopData.makeJob jobData jsData |> snd
     data
     |> FlexibleJobShopData.getAllProducts
-    |> Seq.map (fun product -> product.Id, (product.UnitsPerYear |> float) / 12.0)
-    |> Seq.filter (fun (_, freq) -> rnd.NextDouble() < freq)
-    |> Seq.map (fun (productId, freq) -> 
-           productId, 
-           freq
-           |> max 1.0
-           |> round
-           |> int)
-    |> Seq.collect (fun (productId, count) -> Seq.init count (fun _ -> productId))
-    |> Seq.map (fun productId -> (productId, releaseDate, dueDate))
+    |> Seq.map (fun product -> product, (product.UnitsPerYear |> float) / 12.0)
+//    |> Seq.filter (fun (_, freq) -> rnd.NextDouble() < freq)
+    |> Seq.filter (fun (product, _) -> (int)product.UnitsPerYear >= p.ThreasholdUnitsPerYear)
+    |> Seq.map (fun (product, freq) -> product, freq |> max 1.0 |> round |> int)
+    |> Seq.collect (fun (product, count) -> Seq.init count (fun _ -> product))
+    |> Seq.map (fun product -> (product.Id, releaseDate, dueDate))
     |> Seq.fold makeJobFolder data
 
 let generateJobShopDataFromRealData seed p = 
