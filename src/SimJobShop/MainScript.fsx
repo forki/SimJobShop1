@@ -21,8 +21,8 @@ let p =
       MachinesPerStage = 2
       MinTaskCount = 5   // 8, 40
       MaxTaskCount = 8   // 15, 75
-      MinProcessingTime = TimeSpan.FromMinutes(20.0)
-      MaxProcessingTime = TimeSpan.FromMinutes(60.0)
+      MinProcessingTime = TimeSpan.FromMinutes(5.0)
+      MaxProcessingTime = TimeSpan.FromMinutes(10.0)
       MinCapacityNeeded = 1
       MaxCapacityNeeded = 1
       MinPrice = 1.0
@@ -31,8 +31,9 @@ let p =
       MaxUnitsPerYear = 1000
       ProductCount = 20  // 120
       JobCount = 1000
-      SlowMachinesMinSpeedFactor = 0.3
-      SlowMachinesMaxSpeedFactor = 0.7 }
+      ThreasholdUnitsPerYear = 50
+      SlowMachinesMinSpeedFactor = 0.75
+      SlowMachinesMaxSpeedFactor = 0.9 }
 
 //let flexData = generateJobShopData 1 p
 let flexData = generateJobShopDataFromRealData 42 p
@@ -50,6 +51,7 @@ FlexibleJobShopData.writeDataToFiles OUTPUTDIRECTORY flexData
 
 let data0 = JobShopData.create()
 
+// Map machines
 let (machineMap, data1) =
     flexData
     |> FlexibleJobShopData.getAllMachines
@@ -59,6 +61,7 @@ let (machineMap, data1) =
             (Map.add flexMachine.Id machineId map, data)
         ) (Map.empty, data0)
 
+// Map products
 let (productMap, data2) =
     flexData
     |> FlexibleJobShopData.getAllProducts
@@ -69,7 +72,7 @@ let (productMap, data2) =
         ) (Map.empty, data1)
 
 
-
+// Function to allocate the flexible tasks to machines
 let allocateTask rnd flexData flexTask =
     flexData
     |> FlexibleJobShopData.getAllMachines
@@ -83,6 +86,7 @@ let allocateTask rnd flexData flexTask =
 let rnd = Random.makeGenerator 42
 let allocate = allocateTask rnd flexData
 
+// Map jobs
 let (jobMap, data) =
     flexData
     |> FlexibleJobShopData.getAllJobs
