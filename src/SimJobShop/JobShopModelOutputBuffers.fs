@@ -265,7 +265,7 @@ let execute (state : State) (command : Command) : Event list =
                  //TEMP: This may fail if there's no pending task:
                  CapacityBlocked(entity.JobId, locationId, entity.PendingTasks.Head.CapacityNeeded)
                  //TEMP: compute changeoverTime here and determine wether it is needed:
-                 ChangeoverStarted(entity.JobId, locationId, TimeSpan.FromMinutes(15.0)) ])
+                 ChangeoverStarted(entity.JobId, locationId, TimeSpan.Zero) ])
         |> List.map (fun fact -> 
                { Time = time
                  Fact = fact })
